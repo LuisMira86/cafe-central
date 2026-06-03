@@ -166,6 +166,14 @@
   .badge.ok{background:#d8ecd2;color:#3c6b30}
   .badge.pend{background:#f6e3c4;color:#9a6b15}
   .res-item .grow{flex:1}
+  .res-day-head{
+    display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap;
+    margin:18px 0 9px;padding-bottom:6px;border-bottom:2px solid var(--line);
+  }
+  .res-day-head:first-child{margin-top:2px}
+  .res-day-title{font-family:"Fraunces";font-weight:600;font-size:16px;color:var(--ink)}
+  .res-day-title.past{color:var(--ink-soft);font-style:italic}
+  .res-day-count{font-size:12px;font-weight:700;color:var(--accent-deep);background:rgba(181,72,47,.12);padding:3px 10px;border-radius:999px}
   .empty{text-align:center;color:var(--ink-soft);padding:30px 10px;font-size:14px}
   .empty .big{font-size:34px;display:block;margin-bottom:8px;opacity:.6}
 
@@ -280,6 +288,7 @@
         <div class="btn-row">
           <button class="btn ghost sm" id="addCatDaily">+ Adicionar secção</button>
           <button class="btn ghost sm" id="dlDishesDaily">⬇ Imagens dos pratos</button>
+          <button class="btn ghost sm" id="delDaily" style="color:var(--accent-deep)">🗑 Apagar este menu</button>
           <button class="btn accent" id="saveDaily">Guardar menu</button>
         </div>
       </div>
@@ -1675,6 +1684,18 @@ async function saveDailyMenu(){
   await save('daily:'+currentDailyDate, DAILY[currentDailyDate]);
   renderDayTabs(); toast('Menu do dia guardado ✓');
 }
+async function deleteDailyMenu(){
+  const d = currentDailyDate;
+  if(!DAILY[d]){ toast('Este dia ainda não tem menu guardado'); return; }
+  if(!confirm('Apagar o menu de '+formatDatePt(d)+'? Esta ação não se pode desfazer.')) return;
+  delete DAILY[d];
+  await removeKey('daily:'+d);
+  // passa para a data guardada mais recente, ou para hoje
+  const restantes = Object.keys(DAILY).sort().reverse();
+  currentDailyDate = restantes[0] || todayStr();
+  loadDailyForm();
+  toast('Menu apagado ✓');
+}
 
 /* ============================================================
    FESTAS
@@ -1757,17 +1778,38 @@ function renderRes(){
   let list=RES.slice().sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
   if(resFilter!=='all') list=list.filter(r=>r.type===resFilter);
   if(!list.length){ box.innerHTML='<div class="empty"><span class="big">📅</span>Sem reservas.</div>'; return; }
-  list.forEach(r=>{
-    const el=document.createElement('div'); el.className='res-item';
-    el.innerHTML=`<div class="grow">
-      <div class="who">${esc(r.name)} <span class="badge ${r.type}">${r.type==='festa'?'Festa':'Diário'}</span>
-        <span class="badge ${r.status==='ok'?'ok':'pend'}">${r.status==='ok'?'Confirmada':'Pendente'}</span></div>
-      <div class="meta">${formatDatePt(r.date)}${r.time?' · '+r.time:''} · ${r.people} pessoa(s)${r.phone?' · '+esc(r.phone):''}</div>
-      ${r.notes?`<div class="meta">📝 ${esc(r.notes)}</div>`:''}
-    </div>`;
-    const tog=mkBtn(r.status==='ok'?'↩':'✓','btn ghost sm',async()=>{ r.status=r.status==='ok'?'pend':'ok'; await save('res:'+r.id, r); renderRes(); });
-    const del=mkBtn('🗑','icon-btn',async()=>{ if(confirm('Apagar reserva?')){ RES=RES.filter(x=>x.id!==r.id); await removeKey('res:'+r.id); renderRes(); }});
-    el.append(tog,del); box.appendChild(el);
+
+  // agrupar por dia
+  const grupos={};
+  list.forEach(r=>{ (grupos[r.date]=grupos[r.date]||[]).push(r); });
+  const dias=Object.keys(grupos).sort();
+  const hoje=todayStr();
+
+  dias.forEach(dia=>{
+    const reservasDia=grupos[dia];
+    const totalPessoas=reservasDia.reduce((s,r)=>s+(parseInt(r.people,10)||0),0);
+
+    const head=document.createElement('div');
+    head.className='res-day-head';
+    let etiqueta=formatDatePt(dia);
+    if(dia===hoje) etiqueta='Hoje · '+etiqueta;
+    else if(dia<hoje) etiqueta=etiqueta+' (passada)';
+    head.innerHTML=`<span class="res-day-title${dia<hoje?' past':''}">${etiqueta}</span>
+      <span class="res-day-count">${reservasDia.length} reserva(s) · ${totalPessoas} pessoa(s)</span>`;
+    box.appendChild(head);
+
+    reservasDia.forEach(r=>{
+      const el=document.createElement('div'); el.className='res-item';
+      el.innerHTML=`<div class="grow">
+        <div class="who">${esc(r.name)} <span class="badge ${r.type}">${r.type==='festa'?'Festa':'Diário'}</span>
+          <span class="badge ${r.status==='ok'?'ok':'pend'}">${r.status==='ok'?'Confirmada':'Pendente'}</span></div>
+        <div class="meta">${r.time?r.time+' · ':''}${r.people} pessoa(s)${r.phone?' · '+esc(r.phone):''}</div>
+        ${r.notes?`<div class="meta">📝 ${esc(r.notes)}</div>`:''}
+      </div>`;
+      const tog=mkBtn(r.status==='ok'?'↩':'✓','btn ghost sm',async()=>{ r.status=r.status==='ok'?'pend':'ok'; await save('res:'+r.id, r); renderRes(); });
+      const del=mkBtn('🗑','icon-btn',async()=>{ if(confirm('Apagar reserva?')){ RES=RES.filter(x=>x.id!==r.id); await removeKey('res:'+r.id); renderRes(); }});
+      el.append(tog,del); box.appendChild(el);
+    });
   });
 }
 
@@ -1919,6 +1961,7 @@ async function init(){
   document.getElementById('addCatDaily').onclick=()=>addCat(document.getElementById('dailyCats'),{name:'',items:[{}]});
   document.getElementById('dlDishesDaily').onclick=()=>downloadAllDishes(document.getElementById('dailyCats'));
   document.getElementById('saveDaily').onclick=saveDailyMenu;
+  document.getElementById('delDaily').onclick=deleteDailyMenu;
   document.getElementById('dlDaily').onclick=()=>{ const c=document.getElementById('poster'); downloadCanvas(c,'menu-'+currentDailyDate+'.png'); };
   document.getElementById('printDaily').onclick=()=>printCanvas(document.getElementById('poster'));
   document.getElementById('copyLinkDaily').onclick=async()=>{
