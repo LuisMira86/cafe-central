@@ -175,6 +175,26 @@
   .res-day-title.past{color:var(--ink-soft);font-style:italic}
   .res-day-count{font-size:12px;font-weight:700;color:var(--accent-deep);background:rgba(181,72,47,.12);padding:3px 10px;border-radius:999px}
   .empty{text-align:center;color:var(--ink-soft);padding:30px 10px;font-size:14px}
+  #loginOverlay{
+    position:fixed;inset:0;z-index:9999;background:var(--bg,#f3ead9);
+    display:flex;align-items:center;justify-content:center;padding:20px;
+  }
+  .login-card{
+    background:var(--paper);border:1px solid var(--line);border-radius:18px;
+    padding:34px 28px;max-width:380px;width:100%;text-align:center;
+    box-shadow:0 18px 50px rgba(0,0,0,.12);
+  }
+  .login-logo{font-size:40px;margin-bottom:6px}
+  .login-card h2{font-family:"Fraunces";margin:0 0 6px}
+  .login-card p{color:var(--ink-soft);font-size:14px;margin:0 0 18px}
+  .login-card input{
+    width:100%;padding:13px 14px;border:1px solid var(--line);border-radius:11px;
+    font-size:16px;background:var(--paper);margin-bottom:12px;box-sizing:border-box;
+  }
+  .login-card .btn{width:100%;justify-content:center}
+  .login-remember{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--ink-soft);text-align:left;margin:2px 0 14px;cursor:pointer}
+  .login-remember input{width:auto;margin:0}
+  .login-err{color:var(--accent-deep);font-size:13px;margin-top:10px;min-height:18px}
   .empty .big{font-size:34px;display:block;margin-bottom:8px;opacity:.6}
 
   .caption-box{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:14px;font-size:14px;line-height:1.55;white-space:pre-wrap;color:var(--ink)}
@@ -460,6 +480,18 @@
 
 <div id="print-area"></div>
 <div class="toast" id="toast"></div>
+<div id="loginOverlay" style="display:none">
+  <div class="login-card">
+    <div class="login-logo">🔒</div>
+    <h2>Gestão do restaurante</h2>
+    <p>Inicia sessão para acederes à gestão de menus e reservas.</p>
+    <input type="text" id="loginUser" placeholder="Utilizador" autocomplete="username">
+    <input type="password" id="loginPw" placeholder="Palavra-passe" autocomplete="current-password">
+    <label class="login-remember"><input type="checkbox" id="loginRemember" checked> Lembrar-me neste dispositivo por 90 dias</label>
+    <button class="btn accent" id="loginBtn">Entrar</button>
+    <div id="loginErr" class="login-err"></div>
+  </div>
+</div>
 
 <script>
 /* ============================================================
@@ -568,26 +600,95 @@ async function atFetch(path, opts){
   if(!r.ok){ const t=await r.text(); throw new Error('Airtable '+r.status+': '+t); }
   return r.json();
 }
+/* ---- sessão de login (utilizador + password validados no servidor) ---- */
+const AUTH_KEY='cc_auth';
+let AUTH={ u:'', p:'' };
+(function loadAuth(){
+  // tenta primeiro o "lembrar 90 dias" (localStorage), depois a sessão atual
+  try{
+    const raw = localStorage.getItem(AUTH_KEY) || sessionStorage.getItem(AUTH_KEY);
+    if(raw){
+      const a = JSON.parse(raw);
+      if(a && (!a.exp || a.exp > Date.now())) AUTH = { u:a.u||'', p:a.p||'' };
+      else { try{ localStorage.removeItem(AUTH_KEY); sessionStorage.removeItem(AUTH_KEY); }catch(e){} }
+    }
+  }catch(e){}
+})();
+function authHeaders(extra){
+  const h = Object.assign({}, extra||{});
+  if(AUTH.u){ h['X-Auth-User']=AUTH.u; h['X-Auth-Pass']=AUTH.p; }
+  return h;
+}
+function clearAuth(){
+  AUTH={ u:'', p:'' };
+  try{ localStorage.removeItem(AUTH_KEY); sessionStorage.removeItem(AUTH_KEY); }catch(e){}
+}
+function notAuthed(){ // sessão inválida/expirada -> volta ao login
+  clearAuth(); showLogin();
+  throw new Error('401');
+}
+function showLogin(){
+  const o=document.getElementById('loginOverlay');
+  if(o){ o.style.display='flex'; const i=document.getElementById('loginUser'); if(i){ setTimeout(()=>i.focus(),60); } }
+}
+function hideLogin(){ const o=document.getElementById('loginOverlay'); if(o) o.style.display='none'; }
+async function doLogin(){
+  const u=(document.getElementById('loginUser').value||'').trim();
+  const p=(document.getElementById('loginPw').value||'').trim();
+  const remember=document.getElementById('loginRemember').checked;
+  const errEl=document.getElementById('loginErr');
+  if(!u || !p){ errEl.textContent='Escreve o utilizador e a palavra-passe.'; return; }
+  errEl.textContent='A verificar…';
+  const prev={...AUTH}; AUTH={ u, p };
+  let r;
+  try{ r=await fetch('/api/data', { headers: authHeaders() }); }
+  catch(e){ errEl.textContent='Sem ligação. Tenta de novo.'; AUTH=prev; return; }
+  if(r.status===401){ errEl.textContent='Utilizador ou palavra-passe errados.'; AUTH=prev; return; }
+  if(!r.ok){ errEl.textContent='Erro ('+r.status+'). Tenta de novo.'; AUTH=prev; return; }
+  // guarda a sessão: 90 dias se "lembrar", senão só até fechar o navegador
+  try{
+    if(remember){
+      const exp = Date.now() + 90*24*60*60*1000;
+      localStorage.setItem(AUTH_KEY, JSON.stringify({ u, p, exp }));
+      sessionStorage.removeItem(AUTH_KEY);
+    } else {
+      sessionStorage.setItem(AUTH_KEY, JSON.stringify({ u, p }));
+      localStorage.removeItem(AUTH_KEY);
+    }
+  }catch(e){}
+  errEl.textContent='';
+  hideLogin();
+  try{
+    const d=await r.json();
+    await applyDataset(d.data||{});
+    AT_ONLINE=true; setSyncState('ok');
+    reloadUIFromState();
+    toast('Sessão iniciada ✓');
+  }catch(e){ /* ignora; recarrega no próximo ciclo */ }
+}
 /* descarrega tudo via a ponte do servidor (/api/data) — sem token no cliente */
 async function atPullAll(){
-  const r = await fetch('/api/data');
+  const r = await fetch('/api/data', { headers: authHeaders() });
+  if(r.status===401) return notAuthed();
   if(!r.ok) throw new Error('data '+r.status);
   const d = await r.json();
   return d.data || {};
 }
 async function atUpsert(key, val){
   const r = await fetch('/api/data', {
-    method:'POST', headers:{'Content-Type':'application/json'},
+    method:'POST', headers: authHeaders({'Content-Type':'application/json'}),
     body: JSON.stringify({ key, value: val })
   });
+  if(r.status===401) return notAuthed();
   if(!r.ok){ const t=await r.text(); throw new Error('gravar '+r.status+': '+t); }
 }
 async function atDelete(key){
   try{
-    await fetch('/api/data?del=1', {
-      method:'POST', headers:{'Content-Type':'application/json'},
+    const r = await fetch('/api/data?del=1', {
+      method:'POST', headers: authHeaders({'Content-Type':'application/json'}),
       body: JSON.stringify({ key })
     });
+    if(r.status===401) return notAuthed();
   }catch(e){}
 }
 
@@ -1962,6 +2063,8 @@ async function init(){
   document.getElementById('dlDishesDaily').onclick=()=>downloadAllDishes(document.getElementById('dailyCats'));
   document.getElementById('saveDaily').onclick=saveDailyMenu;
   document.getElementById('delDaily').onclick=deleteDailyMenu;
+  document.getElementById('loginBtn').onclick=doLogin;
+  ['loginUser','loginPw'].forEach(id=>document.getElementById(id).addEventListener('keydown',e=>{ if(e.key==='Enter') doLogin(); }));
   document.getElementById('dlDaily').onclick=()=>{ const c=document.getElementById('poster'); downloadCanvas(c,'menu-'+currentDailyDate+'.png'); };
   document.getElementById('printDaily').onclick=()=>printCanvas(document.getElementById('poster'));
   document.getElementById('copyLinkDaily').onclick=async()=>{
