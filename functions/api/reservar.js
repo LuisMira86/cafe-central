@@ -16,12 +16,25 @@ const CORS = {
 };
 const json = (status, obj) => new Response(JSON.stringify(obj), { status, headers: CORS });
 
-// Notifica o dono por WhatsApp (via CallMeBot, grátis) quando entra uma reserva.
-// Só dispara se WHATSAPP_PHONE e CALLMEBOT_APIKEY estiverem nas variáveis do Cloudflare.
+// Notifica por WhatsApp (via CallMeBot, grátis) quando entra uma reserva.
+// Suporta VÁRIOS destinatários. Cada número tem a sua própria apikey no CallMeBot.
+// Configuração nas variáveis do Cloudflare (uma destas formas):
+//   1) Vários: WHATSAPP_DEST = "351911111111:11111,351922222222:22222"
+//      (pares numero:apikey separados por vírgula)
+//   2) Um só (formato antigo): WHATSAPP_PHONE + CALLMEBOT_APIKEY
 async function notifyWhatsApp(env, reserva, eventLabel) {
-  const phone = env.WHATSAPP_PHONE;        // ex: +351912345678
-  const apikey = env.CALLMEBOT_APIKEY;
-  if (!phone || !apikey) return;           // não configurado -> não faz nada
+  // monta a lista de destinatários {phone, apikey}
+  const dests = [];
+  if (env.WHATSAPP_DEST) {
+    for (const par of env.WHATSAPP_DEST.split(',')) {
+      const [phone, apikey] = par.split(':').map(s => (s || '').trim());
+      if (phone && apikey) dests.push({ phone, apikey });
+    }
+  } else if (env.WHATSAPP_PHONE && env.CALLMEBOT_APIKEY) {
+    dests.push({ phone: env.WHATSAPP_PHONE.trim(), apikey: env.CALLMEBOT_APIKEY.trim() });
+  }
+  if (!dests.length) return;                 // não configurado -> não faz nada
+
   const linhas = [
     '*Nova reserva* 🍽️',
     'Nome: ' + reserva.name,
@@ -32,10 +45,14 @@ async function notifyWhatsApp(env, reserva, eventLabel) {
   if (eventLabel) linhas.push('Evento: ' + eventLabel);
   if (reserva.notes) linhas.push('Notas: ' + reserva.notes);
   const texto = linhas.join('\n');
-  const url = 'https://api.callmebot.com/whatsapp.php?phone=' + encodeURIComponent(phone) +
-              '&text=' + encodeURIComponent(texto) +
-              '&apikey=' + encodeURIComponent(apikey);
-  try { await fetch(url); } catch (e) { /* falha silenciosa: a reserva foi gravada na mesma */ }
+
+  // envia para todos (em paralelo); falhas são silenciosas
+  await Promise.all(dests.map(d => {
+    const url = 'https://api.callmebot.com/whatsapp.php?phone=' + encodeURIComponent(d.phone) +
+                '&text=' + encodeURIComponent(texto) +
+                '&apikey=' + encodeURIComponent(d.apikey);
+    return fetch(url).catch(() => {});
+  }));
 }
 
 export async function onRequest(context) {
