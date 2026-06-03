@@ -559,61 +559,27 @@ async function atFetch(path, opts){
   if(!r.ok){ const t=await r.text(); throw new Error('Airtable '+r.status+': '+t); }
   return r.json();
 }
-/* descarrega tudo do Airtable para a cache local e devolve mapa chave->valor */
+/* descarrega tudo via a ponte do servidor (/api/data) — sem token no cliente */
 async function atPullAll(){
-  const out={}; AT_RECIDS={};
-  let offset=null;
-  do{
-    const q = new URLSearchParams({ pageSize:'100', returnFieldsByFieldId:'true' });
-    if(offset) q.set('offset', offset);
-    const data = await atFetch(AT.base+'/'+AT.table+'?'+q.toString());
-    for(const rec of data.records){
-      const key = rec.fields[AT.f.key]; if(!key) continue;
-      AT_RECIDS[key]=rec.id;
-      const raw = rec.fields[AT.f.content];
-      try{ out[key]= raw!=null ? JSON.parse(raw) : null; }catch(e){ out[key]=raw; }
-    }
-    offset = data.offset;
-  } while(offset);
-  return out;
+  const r = await fetch('/api/data');
+  if(!r.ok) throw new Error('data '+r.status);
+  const d = await r.json();
+  return d.data || {};
 }
 async function atUpsert(key, val){
-  // proteção: se o valor tiver imagens em dataURL gigante (logo/fundo não migrados
-  // para o KV), guarda no Airtable uma versão sem essas imagens, para não rebentar
-  // o limite do campo. As imagens ficam no navegador até o KV estar a funcionar.
-  let safeVal = val;
-  try{
-    const s = JSON.stringify(val);
-    if(s.length > 95000){
-      const clone = JSON.parse(s);
-      const strip = o=>{ if(!o||typeof o!=='object') return;
-        for(const k in o){ const v=o[k];
-          if(typeof v==='string' && v.startsWith('data:image/')) o[k]='';
-          else if(typeof v==='object') strip(v);
-        }
-      };
-      strip(clone);
-      safeVal = clone;
-    }
-  }catch(e){}
-  const fields={};
-  fields[AT.f.key]=key;
-  fields[AT.f.type]=keyType(key);
-  fields[AT.f.content]=JSON.stringify(safeVal);
-  fields[AT.f.summary]=keySummary(key,val);
-  fields[AT.f.updated]=new Date().toISOString();
-  const rid=AT_RECIDS[key];
-  if(rid){
-    await atFetch(AT.base+'/'+AT.table+'/'+rid, {method:'PATCH', body:JSON.stringify({fields})});
-  } else {
-    const res=await atFetch(AT.base+'/'+AT.table, {method:'POST', body:JSON.stringify({records:[{fields}], typecast:true})});
-    if(res.records&&res.records[0]) AT_RECIDS[key]=res.records[0].id;
-  }
+  const r = await fetch('/api/data', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ key, value: val })
+  });
+  if(!r.ok){ const t=await r.text(); throw new Error('gravar '+r.status+': '+t); }
 }
 async function atDelete(key){
-  const rid=AT_RECIDS[key]; if(!rid) return;
-  try{ await atFetch(AT.base+'/'+AT.table+'/'+rid, {method:'DELETE'}); }catch(e){}
-  delete AT_RECIDS[key];
+  try{
+    await fetch('/api/data?del=1', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ key })
+    });
+  }catch(e){}
 }
 
 /* ---- API usada pela app (load/save/remove) ---- */
@@ -675,11 +641,10 @@ async function applyDataset(data){
 }
 
 async function connectAirtable(token, silent){
-  AT_TOKEN=(token||'').trim();
-  if(!AT_TOKEN){ toast('Cola primeiro o token'); return false; }
+  // já não usa token no cliente — liga sempre através da ponte /api/data
   setSyncState('sync'); setATStatus('a ligar…');
   try{
-    const data = await atPullAll();           // testa o token e puxa tudo
+    const data = await atPullAll();           // puxa tudo via servidor
     AT_ONLINE=true;
     // se o Airtable está vazio, envia o que há localmente (primeira ligação)
     if(Object.keys(data).length===0){
@@ -2039,21 +2004,10 @@ async function init(){
   // re-render quando a biblioteca de QR estiver disponível
   ensureQR(()=>{ refreshDailyPoster(); refreshPartyPoster(); });
 
-  // ligação Airtable — o token NUNCA está no ficheiro (seria público no GitHub).
-  // É guardado só no navegador (localStorage). Se não houver, a app pede-o uma vez.
-  let savedToken = '';
-  try{ savedToken = localStorage.getItem('at_token') || ''; }catch(e){}
-  if(!savedToken && AIRTABLE_TOKEN && AIRTABLE_TOKEN!=='COLA_AQUI_O_TEU_TOKEN'){
-    savedToken = AIRTABLE_TOKEN; // retrocompatibilidade, caso esteja embutido
-  }
-  if(!savedToken){
-    savedToken = (prompt('Cola aqui o teu token do Airtable (fica guardado só neste aparelho):')||'').trim();
-    if(savedToken){ try{ localStorage.setItem('at_token', savedToken); }catch(e){} }
-  }
-  if(savedToken){
-    const ok = await connectAirtable(savedToken, true);
+  // ligação automática via servidor — o cliente NÃO precisa de token nenhum
+  {
+    const ok = await connectAirtable(null, true);
     if(ok){
-      try{ localStorage.setItem('at_token', savedToken); }catch(e){}
       reloadUIFromState();
       // re-sincroniza a cada 30s: reservas novas (feitas no formulário) aparecem sozinhas
       setInterval(async ()=>{
@@ -2065,8 +2019,6 @@ async function init(){
         }catch(e){ /* falha silenciosa; tenta de novo no próximo ciclo */ }
       }, 30000);
     }
-  } else {
-    setSyncState('off');
   }
 }
 init();
