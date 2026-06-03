@@ -1,6 +1,10 @@
 // ============================================================
 //  Ponte segura para a app ler/escrever no Airtable.
-//  O token vive em env.AIRTABLE_TOKEN (servidor) — NUNCA no cliente.
+//  O token do Airtable vive em env.AIRTABLE_TOKEN (servidor) — nunca no cliente.
+//
+//  Login: utilizadores guardados no Airtable em linhas com chave "user:<nome>"
+//  e a password no campo Conteudo. A app envia o nome+password nos cabeçalhos
+//  X-Auth-User / X-Auth-Pass e o servidor valida-os aqui.
 //
 //  GET  /api/data            -> devolve todos os registos {chave: valor}
 //  POST /api/data            -> grava/atualiza  body: {key, value}
@@ -14,7 +18,7 @@ const F = {
 };
 const CORS = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'Content-Type',
+  'Access-Control-Allow-Headers': 'Content-Type, X-Auth-User, X-Auth-Pass, X-App-Password',
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
   'Content-Type': 'application/json',
 };
@@ -25,6 +29,7 @@ function keyType(k){
   if(k.startsWith('daily:')) return 'daily';
   if(k.startsWith('party:')) return 'party';
   if(k.startsWith('res:')) return 'reservation';
+  if(k.startsWith('user:')) return 'user';
   return 'other';
 }
 
@@ -49,6 +54,22 @@ async function pullAll(token){
   return { out, ids };
 }
 
+// extrai os utilizadores das linhas "user:<nome>". A password pode estar
+// em texto simples no Conteudo, ou em JSON {"pass":"..."}.
+function extractUsers(out){
+  const users = {};
+  for(const k in out){
+    if(!k.startsWith('user:')) continue;
+    const nome = k.slice(5);
+    const v = out[k];
+    let pass = '';
+    if(v && typeof v==='object') pass = String(v.pass!=null ? v.pass : (v.password!=null ? v.password : ''));
+    else pass = String(v==null ? '' : v);
+    if(nome) users[nome] = pass;
+  }
+  return users;
+}
+
 export async function onRequest(context){
   const { request, env } = context;
   if(request.method==='OPTIONS') return new Response('', { status:204, headers:CORS });
@@ -56,12 +77,34 @@ export async function onRequest(context){
   const TOKEN = env.AIRTABLE_TOKEN;
   if(!TOKEN) return json(500, { error:'sem token' });
 
-  // GET -> devolve todos os dados
-  if(request.method==='GET'){
-    try{ const { out } = await pullAll(TOKEN); return json(200, { data: out }); }
-    catch(e){ return json(502, { error:'falha a ler', detail:String(e) }); }
+  // lê tudo uma vez (serve para dados, ids e lista de utilizadores)
+  let out, ids;
+  try{ ({ out, ids } = await pullAll(TOKEN)); }
+  catch(e){ return json(502, { error:'falha a ler', detail:String(e) }); }
+
+  // ---- autenticação (validada no servidor) ----
+  const users = extractUsers(out);
+  const temLogin = Object.keys(users).length > 0;
+  if(temLogin){
+    const u = request.headers.get('X-Auth-User') || '';
+    const p = request.headers.get('X-Auth-Pass') || '';
+    if(!u || users[u]==null || String(users[u]) !== String(p)){
+      return json(401, { error:'nao autorizado' });
+    }
+  } else if(env.APP_PASSWORD){
+    if((request.headers.get('X-App-Password')||'') !== env.APP_PASSWORD){
+      return json(401, { error:'nao autorizado' });
+    }
   }
 
+  // ---- GET: devolve os dados (sem expor as linhas de utilizadores) ----
+  if(request.method==='GET'){
+    const limpo = {};
+    for(const k in out){ if(!k.startsWith('user:')) limpo[k] = out[k]; }
+    return json(200, { data: limpo });
+  }
+
+  // ---- POST: gravar / apagar ----
   if(request.method==='POST'){
     const url = new URL(request.url);
     const isDelete = url.searchParams.get('del')==='1';
@@ -69,12 +112,10 @@ export async function onRequest(context){
     try{ body = await request.json(); }catch(e){ return json(400,{error:'pedido invalido'}); }
     const key = (body && body.key||'').toString();
     if(!key) return json(400, { error:'sem chave' });
-
-    let ids;
-    try{ ids = (await pullAll(TOKEN)).ids; }catch(e){ return json(502,{error:'falha a ler'}); }
+    // a app nunca mexe nas linhas de utilizadores (geridas só no Airtable)
+    if(key.startsWith('user:')) return json(403, { error:'nao permitido' });
     const rid = ids[key];
 
-    // apagar
     if(isDelete){
       if(rid){
         const r = await fetch('https://api.airtable.com/v0/'+AT_BASE+'/'+AT_TABLE+'/'+rid, {
@@ -85,7 +126,6 @@ export async function onRequest(context){
       return json(200, { ok:true });
     }
 
-    // gravar/atualizar
     const val = body.value;
     const fields = {};
     fields[F.key] = key;

@@ -45,6 +45,8 @@ export async function onRequest(context) {
   const url = new URL(request.url);
   const key = url.searchParams.get('key') || '';
   if(!key) return json(400, { error: 'sem chave' });
+  // segurança: o formulário público só pode pedir config/menus/festas
+  if(key.startsWith('res:') || key.startsWith('user:')) return json(403, { error: 'nao permitido' });
 
   try {
     const [config, menu] = await Promise.all([
