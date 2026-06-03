@@ -1,3 +1,7 @@
+// ============================================================
+//  Regista uma reserva no Airtable.   POST /api/reservar
+//  O token vive em env.AIRTABLE_TOKEN (nunca no formulario).
+// ============================================================
 const AT_BASE  = 'appmjXzD9c8RNSHdr';
 const AT_TABLE = 'tblxgGBUtYj820rdz';
 const F = {
@@ -11,6 +15,28 @@ const CORS = {
   'Content-Type': 'application/json',
 };
 const json = (status, obj) => new Response(JSON.stringify(obj), { status, headers: CORS });
+
+// Notifica o dono por WhatsApp (via CallMeBot, grátis) quando entra uma reserva.
+// Só dispara se WHATSAPP_PHONE e CALLMEBOT_APIKEY estiverem nas variáveis do Cloudflare.
+async function notifyWhatsApp(env, reserva, eventLabel) {
+  const phone = env.WHATSAPP_PHONE;        // ex: +351912345678
+  const apikey = env.CALLMEBOT_APIKEY;
+  if (!phone || !apikey) return;           // não configurado -> não faz nada
+  const linhas = [
+    '*Nova reserva* 🍽️',
+    'Nome: ' + reserva.name,
+    'Data: ' + reserva.date,
+    'Pessoas: ' + reserva.people,
+  ];
+  if (reserva.phone) linhas.push('Tel: ' + reserva.phone);
+  if (eventLabel) linhas.push('Evento: ' + eventLabel);
+  if (reserva.notes) linhas.push('Notas: ' + reserva.notes);
+  const texto = linhas.join('\n');
+  const url = 'https://api.callmebot.com/whatsapp.php?phone=' + encodeURIComponent(phone) +
+              '&text=' + encodeURIComponent(texto) +
+              '&apikey=' + encodeURIComponent(apikey);
+  try { await fetch(url); } catch (e) { /* falha silenciosa: a reserva foi gravada na mesma */ }
+}
 
 export async function onRequest(context) {
   const { request, env } = context;
@@ -62,6 +88,9 @@ export async function onRequest(context) {
       const t = await r.text();
       return json(502, { error: 'Falha ao registar', detail: t });
     }
+    // notifica o dono por WhatsApp (não bloqueia a resposta ao cliente)
+    if (context.waitUntil) context.waitUntil(notifyWhatsApp(env, reserva, eventLabel));
+    else { try { await notifyWhatsApp(env, reserva, eventLabel); } catch (e) {} }
     return json(200, { ok: true });
   } catch (e) {
     return json(502, { error: 'Erro de ligacao', detail: String(e) });
