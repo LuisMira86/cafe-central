@@ -1,0 +1,2075 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cozinha · Gestor de Menus</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,900;1,9..144,500&family=Hanken+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+<style>
+  :root{
+    --paper:#f4ede0;
+    --paper-2:#ece2d0;
+    --ink:#2b2118;
+    --ink-soft:#6b5d4c;
+    --accent:#b5482f;
+    --accent-deep:#8f3522;
+    --olive:#5d6340;
+    --line:#d8cbb3;
+    --white:#fbf7ef;
+    --shadow:rgba(43,33,24,.14);
+    --r:14px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    font-family:"Hanken Grotesk",sans-serif;
+    background:
+      radial-gradient(1200px 600px at 85% -10%, rgba(181,72,47,.10), transparent 60%),
+      radial-gradient(900px 500px at -10% 110%, rgba(93,99,64,.12), transparent 55%),
+      var(--paper);
+    color:var(--ink);
+    -webkit-font-smoothing:antialiased;
+  }
+  h1,h2,h3,.serif{font-family:"Fraunces",serif}
+  button{font-family:inherit;cursor:pointer}
+  input,select,textarea{font-family:inherit;font-size:15px}
+
+  /* ---------- Shell ---------- */
+  .shell{max-width:1180px;margin:0 auto;padding:0 22px 80px}
+  header.top{
+    display:flex;align-items:center;gap:18px;
+    padding:26px 0 18px;flex-wrap:wrap;
+  }
+  .brand{display:flex;align-items:center;gap:14px}
+  .logo{
+    width:54px;height:54px;border-radius:16px;display:grid;place-items:center;overflow:hidden;
+    background:linear-gradient(150deg,var(--accent),var(--accent-deep));
+    color:var(--white);font-family:"Fraunces";font-weight:900;font-size:26px;
+    box-shadow:0 8px 20px var(--shadow);flex:none;
+  }
+  .logo img{width:100%;height:100%;object-fit:contain;background:transparent}
+  .logo-prev{width:62px;height:62px;border-radius:15px;flex:none;display:grid;place-items:center;overflow:hidden;background:linear-gradient(150deg,var(--accent),var(--accent-deep));color:var(--white);font-family:"Fraunces";font-weight:900;font-size:27px;border:1px solid var(--line)}
+  .logo-prev img{width:100%;height:100%;object-fit:contain;background:transparent}
+  .brand h1{font-size:26px;font-weight:900;line-height:1;letter-spacing:-.5px}
+  .brand .sub{font-size:13px;color:var(--ink-soft);letter-spacing:.3px;margin-top:3px}
+  .top .spacer{flex:1}
+  .pill{
+    background:var(--white);border:1px solid var(--line);border-radius:999px;
+    padding:9px 16px;font-size:13px;font-weight:600;color:var(--ink-soft);
+    display:inline-flex;gap:8px;align-items:center;
+  }
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--olive)}
+
+  /* ---------- Tabs ---------- */
+  nav.tabs{
+    display:flex;gap:6px;flex-wrap:wrap;
+    background:var(--white);border:1px solid var(--line);
+    padding:6px;border-radius:999px;box-shadow:0 6px 16px var(--shadow);
+    position:sticky;top:12px;z-index:30;margin-bottom:26px;
+  }
+  nav.tabs button{
+    border:0;background:transparent;color:var(--ink-soft);
+    padding:11px 18px;border-radius:999px;font-weight:600;font-size:14px;
+    transition:.18s;white-space:nowrap;
+  }
+  nav.tabs button:hover{color:var(--ink)}
+  nav.tabs button.active{
+    background:var(--ink);color:var(--white);box-shadow:0 4px 12px var(--shadow);
+  }
+
+  /* ---------- Panels ---------- */
+  .panel{display:none;animation:rise .35s ease both}
+  .panel.active{display:block}
+  @keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+  .grid{display:grid;grid-template-columns:1.05fr .95fr;gap:24px;align-items:start}
+  @media(max-width:880px){.grid{grid-template-columns:1fr}}
+
+  .card{
+    background:var(--white);border:1px solid var(--line);border-radius:var(--r);
+    padding:22px;box-shadow:0 10px 28px var(--shadow);
+  }
+  .card h2{font-size:21px;font-weight:600;letter-spacing:-.3px}
+  .card h2 .em{font-style:italic;color:var(--accent)}
+  .card .lead{color:var(--ink-soft);font-size:13.5px;margin:4px 0 18px}
+  .section-kicker{
+    font-size:12px;letter-spacing:.18em;text-transform:uppercase;
+    color:var(--accent);font-weight:700;margin-bottom:6px;display:block;
+  }
+
+  label.fld{display:block;margin-bottom:14px}
+  label.fld span{display:block;font-size:12.5px;font-weight:600;color:var(--ink-soft);margin-bottom:5px}
+  input,select,textarea{
+    width:100%;border:1px solid var(--line);background:var(--paper);
+    border-radius:10px;padding:11px 13px;color:var(--ink);outline:none;transition:.15s;
+  }
+  input:focus,select:focus,textarea:focus{border-color:var(--accent);background:var(--white);box-shadow:0 0 0 3px rgba(181,72,47,.12)}
+  textarea{resize:vertical;min-height:70px}
+  .row{display:flex;gap:12px}
+  .row > *{flex:1}
+
+  .btn{
+    border:0;border-radius:11px;padding:12px 18px;font-weight:700;font-size:14px;
+    background:var(--ink);color:var(--white);transition:.18s;display:inline-flex;
+    align-items:center;gap:8px;justify-content:center;
+  }
+  .btn:hover{transform:translateY(-1px);box-shadow:0 8px 18px var(--shadow)}
+  .btn.accent{background:linear-gradient(150deg,var(--accent),var(--accent-deep))}
+  .btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+  .btn.ghost:hover{background:var(--paper)}
+  .btn.sm{padding:8px 13px;font-size:13px;border-radius:9px}
+  .btn-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:6px}
+
+  /* menu item editor */
+  .cat-block{margin-bottom:16px;border:1px dashed var(--line);border-radius:12px;padding:14px;background:var(--paper)}
+  .cat-head{display:flex;gap:10px;align-items:center;margin-bottom:10px}
+  .cat-head input{font-family:"Fraunces";font-weight:600;font-size:16px;background:transparent;border:0;border-bottom:1px solid var(--line);border-radius:0;padding:4px 2px}
+  .cat-head input:focus{box-shadow:none;border-bottom-color:var(--accent)}
+  .item-line{display:flex;gap:8px;align-items:center;margin-bottom:8px}
+  .item-line input.name{flex:1}
+  .item-line input.price{width:80px}
+  .item-line canvas.thumb{width:44px;height:44px;border-radius:9px;border:1px solid var(--line);cursor:pointer;flex:none;background:var(--paper);transition:.15s}
+  .item-line canvas.thumb:hover{border-color:var(--accent);transform:scale(1.06)}
+  .item-line .add-photo{color:var(--accent)}
+  .item-line .rmphoto{color:var(--accent-deep)}
+  .item-line:not(.has-photo) .rmphoto{display:none}
+  .icon-btn{border:0;background:transparent;color:var(--ink-soft);font-size:18px;line-height:1;padding:6px;border-radius:8px}
+  .icon-btn:hover{background:var(--paper-2);color:var(--accent)}
+
+  /* preview / poster */
+  .preview-wrap{position:sticky;top:78px}
+  .canvas-frame{
+    border-radius:14px;overflow:hidden;border:1px solid var(--line);
+    box-shadow:0 18px 40px var(--shadow);background:#fff;
+  }
+  #poster,#posterParty{width:100%;height:auto;display:block}
+  .controls{display:flex;gap:10px;flex-wrap:wrap;margin:16px 0 6px;align-items:center}
+  .seg{display:inline-flex;background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:3px}
+  .seg button{border:0;background:transparent;padding:7px 12px;border-radius:8px;font-weight:600;font-size:12.5px;color:var(--ink-soft)}
+  .seg button.on{background:var(--ink);color:var(--white)}
+  .swatches{display:flex;gap:7px}
+  .swatch{width:26px;height:26px;border-radius:50%;border:2px solid var(--white);box-shadow:0 0 0 1px var(--line);cursor:pointer}
+  .swatch.on{box-shadow:0 0 0 2px var(--ink)}
+
+  /* reservations + lists */
+  .res-item,.party-item{
+    border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:11px;background:var(--paper);
+    display:flex;gap:12px;align-items:flex-start;
+  }
+  .res-item .who{font-family:"Fraunces";font-weight:600;font-size:16px}
+  .res-item .meta{font-size:13px;color:var(--ink-soft);margin-top:3px}
+  .badge{font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;text-transform:uppercase;letter-spacing:.05em}
+  .badge.diario{background:rgba(93,99,64,.16);color:var(--olive)}
+  .badge.festa{background:rgba(181,72,47,.16);color:var(--accent-deep)}
+  .badge.ok{background:#d8ecd2;color:#3c6b30}
+  .badge.pend{background:#f6e3c4;color:#9a6b15}
+  .res-item .grow{flex:1}
+  .empty{text-align:center;color:var(--ink-soft);padding:30px 10px;font-size:14px}
+  .empty .big{font-size:34px;display:block;margin-bottom:8px;opacity:.6}
+
+  .caption-box{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:14px;font-size:14px;line-height:1.55;white-space:pre-wrap;color:var(--ink)}
+  .share-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
+  .share-grid .btn{width:100%}
+  .note{font-size:12.5px;color:var(--ink-soft);background:rgba(93,99,64,.10);border-left:3px solid var(--olive);padding:10px 13px;border-radius:8px;margin-top:14px;line-height:1.5}
+
+  .toast{
+    position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);
+    background:var(--ink);color:var(--white);padding:13px 22px;border-radius:999px;
+    font-weight:600;font-size:14px;box-shadow:0 10px 30px var(--shadow);opacity:0;
+    transition:.3s;z-index:100;pointer-events:none;
+  }
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+  .day-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+  .day-tabs .chip{border:1px solid var(--line);background:var(--paper);border-radius:999px;padding:7px 13px;font-size:12.5px;font-weight:600;color:var(--ink-soft)}
+  .day-tabs .chip.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+
+  #devicePill{border-color:var(--accent);color:var(--accent-deep)}
+
+  /* ---------- Responsivo (deteta automaticamente largura/dispositivo) ---------- */
+  @media(max-width:880px){
+    .grid{grid-template-columns:1fr}
+    .preview-wrap{position:static !important;top:auto !important}
+    nav.tabs{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;justify-content:flex-start;border-radius:16px;scrollbar-width:none}
+    nav.tabs::-webkit-scrollbar{display:none}
+    nav.tabs button{flex:0 0 auto}
+  }
+  @media(max-width:560px){
+    .shell{padding:0 14px 64px}
+    header.top{padding:18px 0 12px;gap:10px}
+    .brand h1{font-size:21px}
+    .brand .sub{font-size:12px}
+    .logo{width:46px;height:46px;font-size:22px;border-radius:13px}
+    #savePill{display:none}
+    #devicePill{padding:8px 13px;font-size:12.5px}
+    .card{padding:16px;border-radius:12px}
+    .card h2{font-size:18px}
+    .row{flex-direction:column;gap:0}
+    nav.tabs button{padding:10px 13px;font-size:13px}
+    .controls{gap:8px}
+    .seg button{padding:7px 10px;font-size:12px}
+    .btn{padding:12px 14px;font-size:14px}
+    .btn-row .btn{flex:1 1 auto}
+    .item-line input.price{width:68px}
+    .item-line canvas.thumb{width:42px;height:42px}
+  }
+  @media(max-width:380px){
+    .item-line{flex-wrap:wrap;gap:6px}
+    .item-line input.name{flex:1 1 calc(100% - 56px)}
+    .item-line input.price{flex:1 1 100%;width:auto}
+  }
+  /* Em ecrãs táteis, alvos de toque maiores */
+  body.is-mobile input,body.is-mobile select,body.is-mobile textarea{padding:13px}
+  body.is-mobile .icon-btn{padding:9px;font-size:20px}
+
+  @media print{
+    body *{visibility:hidden}
+    #print-area,#print-area *{visibility:visible}
+    #print-area{position:absolute;inset:0;margin:0;padding:0}
+    #print-area img{width:100%;height:auto}
+  }
+  #print-area{display:none}
+</style>
+</head>
+<body>
+<div class="shell">
+  <header class="top">
+    <div class="brand">
+      <div class="logo" id="logoBox">C</div>
+      <div>
+        <h1 id="brandName">A Tua Cozinha</h1>
+        <div class="sub" id="brandSub">Gestor de menus, cartazes e reservas</div>
+      </div>
+    </div>
+    <div class="spacer"></div>
+    <span class="pill" id="savePill"><span class="dot"></span> Guardado automaticamente</span>
+    <span class="pill" id="syncPill" style="display:none"></span>
+    <span class="pill" id="devicePill">💻 PC</span>
+  </header>
+
+  <nav class="tabs" id="tabs">
+    <button data-tab="diario" class="active">🍽️ Menu Diário</button>
+    <button data-tab="festas">🎉 Menus de Festa</button>
+    <button data-tab="cartaz">🖼️ Cartaz & Imagem</button>
+    <button data-tab="reservas">📅 Reservas</button>
+    <button data-tab="config">⚙️ Definições</button>
+  </nav>
+
+  <!-- ============ MENU DIÁRIO ============ -->
+  <section class="panel active" id="panel-diario">
+    <div class="grid">
+      <div class="card">
+        <span class="section-kicker">Editável a qualquer momento</span>
+        <h2>Menu <span class="em">do dia</span></h2>
+        <p class="lead">Escolhe a data, edita os pratos e os preços. A imagem é gerada automaticamente.</p>
+
+        <div class="day-tabs" id="dayTabs"></div>
+
+        <label class="fld">
+          <span>Data do menu</span>
+          <input type="date" id="dailyDate">
+        </label>
+        <label class="fld">
+          <span>Subtítulo (opcional)</span>
+          <input type="text" id="dailySubtitle" placeholder="Ex.: Especial de domingo">
+        </label>
+
+        <div id="dailyCats"></div>
+        <div class="btn-row">
+          <button class="btn ghost sm" id="addCatDaily">+ Adicionar secção</button>
+          <button class="btn ghost sm" id="dlDishesDaily">⬇ Imagens dos pratos</button>
+          <button class="btn accent" id="saveDaily">Guardar menu</button>
+        </div>
+      </div>
+
+      <div class="preview-wrap">
+        <div class="card">
+          <span class="section-kicker">Pré-visualização ao vivo</span>
+          <h2>Imagem <span class="em">automática</span></h2>
+          <div class="controls">
+            <div class="seg" id="fmtSeg">
+              <button data-fmt="post" class="on">Post</button>
+              <button data-fmt="story">Story</button>
+              <button data-fmt="flyer">Cartaz A4</button>
+            </div>
+            <div class="swatches" id="swatches"></div>
+          </div>
+          <div class="canvas-frame"><canvas id="poster"></canvas></div>
+          <div class="btn-row" style="margin-top:14px">
+            <button class="btn" id="dlDaily">⬇ Descarregar imagem</button>
+            <button class="btn ghost" id="printDaily">🖨️ Imprimir cartaz</button>
+            <button class="btn ghost" id="copyLinkDaily">🔗 Copiar link de reserva</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ FESTAS ============ -->
+  <section class="panel" id="panel-festas">
+    <div class="grid">
+      <div class="card">
+        <span class="section-kicker">Eventos & celebrações</span>
+        <h2>Menu de <span class="em">festa</span></h2>
+        <p class="lead">Cria um menu com título próprio para aniversários, casamentos ou eventos.</p>
+        <label class="fld">
+          <span>Título da festa</span>
+          <input type="text" id="partyTitle" placeholder="Ex.: Jantar de Natal da Empresa">
+        </label>
+        <div class="row">
+          <label class="fld"><span>Data</span><input type="date" id="partyDate"></label>
+          <label class="fld"><span>Preço por pessoa (opcional)</span><input type="text" id="partyPrice" placeholder="35€"></label>
+        </div>
+        <div id="partyCats"></div>
+        <div class="btn-row">
+          <button class="btn ghost sm" id="addCatParty">+ Adicionar secção</button>
+          <button class="btn ghost sm" id="dlDishesParty">⬇ Imagens dos pratos</button>
+          <button class="btn accent" id="saveParty">Guardar menu de festa</button>
+        </div>
+
+        <h3 style="margin:24px 0 10px;font-size:16px">Menus guardados</h3>
+        <div id="partyList"></div>
+      </div>
+
+      <div class="preview-wrap">
+        <div class="card">
+          <span class="section-kicker">Pré-visualização ao vivo</span>
+          <h2>Imagem <span class="em">da festa</span></h2>
+          <div class="controls">
+            <div class="seg" id="fmtSegP">
+              <button data-fmt="post" class="on">Post</button>
+              <button data-fmt="story">Story</button>
+              <button data-fmt="flyer">Cartaz A4</button>
+            </div>
+            <div class="swatches" id="swatchesP"></div>
+          </div>
+          <div class="controls" style="margin-top:0">
+            <button class="btn ghost sm" id="partyBgBtn">🖼️ Imagem de fundo</button>
+            <button class="btn ghost sm" id="partyBgRemove" style="display:none">✕ Remover fundo</button>
+            <div id="partyVeilRow" style="display:none;align-items:center;gap:8px;flex:1;min-width:160px">
+              <span style="font-size:12px;color:var(--ink-soft);white-space:nowrap">Véu</span>
+              <input type="range" id="partyVeil" min="35" max="95" value="78" style="flex:1">
+            </div>
+          </div>
+          <div class="canvas-frame"><canvas id="posterParty"></canvas></div>
+          <div class="btn-row" style="margin-top:14px">
+            <button class="btn" id="dlParty">⬇ Descarregar imagem</button>
+            <button class="btn ghost" id="printParty">🖨️ Imprimir cartaz</button>
+            <button class="btn ghost" id="copyLinkParty">🔗 Copiar link de reserva</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ CARTAZ ============ -->
+  <section class="panel" id="panel-cartaz">
+    <div class="card">
+      <span class="section-kicker">Centro de impressão</span>
+      <h2>Cartaz & <span class="em">imagem</span></h2>
+      <p class="lead">Cada prato pode ter a sua fotografia real, e cada menu gera automaticamente uma imagem nova. Aqui escolhes o formato e descarregas ou imprimes. Volta ao separador do menu para editar os pratos.</p>
+      <div class="note">📷 <b>Foto real por prato:</b> em cada prato, toca na miniatura (ou no botão 📷) para anexar uma fotografia. A imagem do prato passa a usar essa foto; o ⊘ remove-a e o ⬇ descarrega. <b>Guarda o menu</b> para as fotos ficarem associadas.<br><br>📲 <b>Reservas por QR:</b> cada menu do dia e cada evento gera o seu próprio QR-code no cartaz, já com a data fixada. Quem o lê abre um formulário, preenche nome/telefone/pessoas e a reserva entra logo no separador Reservas. Usa o botão <b>🔗 Copiar link de reserva</b> para partilhares o mesmo nas redes sociais.<br><br><b>Formatos do cartaz:</b> <b>Post</b> (1080×1080) · <b>Story</b> (1080×1920) · <b>Cartaz A4</b> (alta resolução). Para imprimir usa o botão de impressão em cada menu.</div>
+    </div>
+  </section>
+
+  <!-- ============ REDES (removido) ============ -->
+
+  <!-- ============ RESERVAS ============ -->
+  <section class="panel" id="panel-reservas">
+    <div class="grid">
+      <div class="card">
+        <span class="section-kicker">Nova reserva</span>
+        <h2>Marcar <span class="em">reserva</span></h2>
+        <div class="row">
+          <label class="fld"><span>Nome</span><input id="rName" placeholder="Nome do cliente"></label>
+          <label class="fld"><span>Telefone</span><input id="rPhone" placeholder="9XX XXX XXX"></label>
+        </div>
+        <div class="row">
+          <label class="fld"><span>Data</span><input type="date" id="rDate"></label>
+          <label class="fld"><span>Hora</span><input type="time" id="rTime"></label>
+        </div>
+        <div class="row">
+          <label class="fld"><span>Nº de pessoas</span><input type="number" id="rPeople" min="1" value="2"></label>
+          <label class="fld"><span>Tipo</span>
+            <select id="rType"><option value="diario">Menu diário</option><option value="festa">Festa / evento</option></select>
+          </label>
+        </div>
+        <label class="fld"><span>Notas (alergias, menu escolhido...)</span><textarea id="rNotes" placeholder="Ex.: festa de aniversário, mesa junto à janela"></textarea></label>
+        <button class="btn accent" id="addRes">+ Adicionar reserva</button>
+      </div>
+      <div class="card">
+        <span class="section-kicker">Agenda</span>
+        <h2>Reservas <span class="em">marcadas</span></h2>
+        <div class="controls" style="margin-top:10px">
+          <div class="seg" id="resFilter">
+            <button data-f="all" class="on">Todas</button>
+            <button data-f="diario">Diário</button>
+            <button data-f="festa">Festas</button>
+          </div>
+        </div>
+        <div id="resList" style="margin-top:14px"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ CONFIG ============ -->
+  <section class="panel" id="panel-config">
+    <div class="card" style="max-width:620px">
+      <span class="section-kicker">Identidade</span>
+      <h2>Definições do <span class="em">restaurante</span></h2>
+      <p class="lead">Estes dados aparecem em todos os cartazes e imagens.</p>
+      <label class="fld"><span>Nome do restaurante</span><input id="cfgName" placeholder="A Tua Cozinha"></label>
+      <label class="fld"><span>Slogan / subtítulo</span><input id="cfgSub" placeholder="Cozinha de mercado · desde 1998"></label>
+      <label class="fld"><span>Logótipo</span>
+        <div style="display:flex;gap:12px;align-items:center">
+          <div id="logoPreview" class="logo-prev"></div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn ghost sm" id="uploadLogo" type="button">⬆ Carregar imagem</button>
+            <button class="btn ghost sm" id="removeLogo" type="button">Remover</button>
+          </div>
+        </div>
+        <small style="display:block;color:var(--ink-soft);font-size:12px;margin-top:6px">Aparece no cabeçalho e nos cartazes. Sem logótipo, é usada a inicial abaixo.</small>
+      </label>
+      <div class="row">
+        <label class="fld"><span>Telefone</span><input id="cfgPhone" placeholder="+351 ..."></label>
+        <label class="fld"><span>Inicial (reserva)</span><input id="cfgInitial" maxlength="2" placeholder="C"></label>
+      </div>
+      <label class="fld"><span>Morada</span><input id="cfgAddr" placeholder="Rua ..., Lisboa"></label>
+      <label class="fld"><span>Redes sociais & links</span>
+        <div id="socialsList"></div>
+        <button class="btn ghost sm" id="addSocial" type="button">+ Adicionar link</button>
+      </label>
+      <label class="fld"><span>Cor principal</span>
+        <div class="swatches" id="cfgSwatches" style="margin-top:4px"></div>
+      </label>
+      <button class="btn accent" id="saveCfg">Guardar definições</button>
+    </div>
+  </section>
+</div>
+
+<div id="print-area"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============================================================
+   ESTADO + ARMAZENAMENTO PERSISTENTE (window.storage)
+   ============================================================ */
+const THEMES = [
+  {name:'Terracota', accent:'#b5482f', deep:'#8f3522', paper:'#f4ede0', ink:'#2b2118'},
+  {name:'Azeitona',  accent:'#5d6340', deep:'#444a2c', paper:'#f1efe2', ink:'#262617'},
+  {name:'Borgonha',  accent:'#7d2e3f', deep:'#5c1f2c', paper:'#f3ebe6', ink:'#2a1c1e'},
+  {name:'Petróleo',  accent:'#1f5f63', deep:'#13474a', paper:'#eef0ec', ink:'#16221f'},
+  {name:'Mostarda',  accent:'#c08a1e', deep:'#946813', paper:'#f5efe1', ink:'#2c2410'},
+  {name:'Carvão',    accent:'#3a3a3a', deep:'#1f1f1f', paper:'#efece6', ink:'#1c1c1c'},
+];
+
+let CFG = { name:'A Tua Cozinha', sub:'Cozinha de mercado', phone:'', addr:'', socials:[], initial:'C', logo:'', resLink:'', themeIndex:0 };
+let DAILY = {};        // { 'YYYY-MM-DD': {subtitle, cats:[{name, items:[{name,price}]}]} }
+let PARTIES = [];      // [{id,title,date,price,cats:[...]}]
+let RES = [];          // [{id,name,phone,date,time,people,type,notes,status}]
+
+let currentDailyDate = todayStr();
+let currentPartyId = null;
+let currentPartyBgId = '';
+let currentPartyVeil = 0.78;
+let posterFmt = 'post';
+let posterFmtParty = 'post';
+
+/* ============================================================
+   ARMAZENAMENTO: cache local (rápido/offline) + Airtable (sincroniza PC↔telemóvel)
+   ============================================================ */
+/* ============================================================
+   ▼▼▼  LIGAÇÃO AO AIRTABLE  ▼▼▼
+   Cola aqui o teu token do Airtable (entre as aspas).
+   É a ÚNICA linha que precisas de editar para ligar a sincronização.
+   Para desligar a sincronização, deixa as aspas vazias: ''
+   ============================================================ */
+const AIRTABLE_TOKEN = 'COLA_AQUI_O_TEU_TOKEN';
+
+/* Endereço público do site depois de publicado no Netlify.
+   Ex.: 'https://o-meu-restaurante.netlify.app'
+   Deixa vazio ('') para usar automaticamente o endereço onde a app está aberta. */
+const SITE_URL = '';
+/* ============================================================
+   ▲▲▲  fim da zona a editar  ▲▲▲
+   ============================================================ */
+
+const AT = {
+  base: 'appmjXzD9c8RNSHdr',
+  table: 'tblxgGBUtYj820rdz',
+  f: { key:'fldlCfYu5nlCs0Iir', type:'fldS7CwfZw8MzG0oU', content:'fldo3JkGMLTBdQHe4', summary:'fld4lQ4hZQdmoeYP0', updated:'fldVZVFHlpcEwQrms' }
+};
+let AT_TOKEN = '';                // token pessoal do Airtable (definido nas Definições)
+let AT_RECIDS = {};               // mapa chave -> recordId no Airtable
+let AT_ONLINE = false;            // true quando o token está configurado e válido
+
+let storeOK = (typeof window !== 'undefined' && !!window.storage);
+const MEM = {};   // cache em memória — funciona mesmo se o navegador bloquear o armazenamento
+
+/* ---- cache local (à prova de bloqueio: cai para memória) ---- */
+async function localGet(key, fallback){
+  if(storeOK){
+    try{ const r = await window.storage.get(key); if(r) return JSON.parse(r.value); }
+    catch(e){ storeOK=false; }   // armazenamento bloqueado → usa memória daqui para a frente
+  }
+  return (key in MEM) ? MEM[key] : fallback;
+}
+async function localSet(key, val){
+  MEM[key] = val;                // guarda sempre em memória
+  if(storeOK){
+    try{ await window.storage.set(key, JSON.stringify(val)); }
+    catch(e){ storeOK=false; }
+  }
+}
+async function localList(){
+  if(storeOK){
+    try{ const r = await window.storage.list(); return (r&&r.keys)||[]; }
+    catch(e){ storeOK=false; }
+  }
+  return Object.keys(MEM);
+}
+
+/* ---- tipo a partir da chave ---- */
+function keyType(key){
+  if(key==='config') return 'config';
+  if(key.startsWith('daily:')) return 'daily';
+  if(key.startsWith('party:')) return 'party';
+  if(key.startsWith('res:')) return 'reservation';
+  if(key.startsWith('photo:')) return 'photo';
+  return 'config';
+}
+function keySummary(key,val){
+  try{
+    if(key==='config') return (val&&val.name)||'Definições';
+    if(key.startsWith('daily:')) return 'Menu do dia '+key.slice(6);
+    if(key.startsWith('party:')) return 'Festa: '+((val&&val.title)||'(sem título)');
+    if(key.startsWith('res:')) return 'Reserva: '+((val&&val.name)||'');
+    if(key.startsWith('photo:')) return 'Foto de prato';
+  }catch(e){}
+  return key;
+}
+
+/* ---- chamadas REST ao Airtable ---- */
+async function atFetch(path, opts){
+  const r = await fetch('https://api.airtable.com/v0/'+path, Object.assign({
+    headers:{ 'Authorization':'Bearer '+AT_TOKEN, 'Content-Type':'application/json' }
+  }, opts||{}));
+  if(!r.ok){ const t=await r.text(); throw new Error('Airtable '+r.status+': '+t); }
+  return r.json();
+}
+/* descarrega tudo do Airtable para a cache local e devolve mapa chave->valor */
+async function atPullAll(){
+  const out={}; AT_RECIDS={};
+  let offset=null;
+  do{
+    const q = new URLSearchParams({ pageSize:'100', returnFieldsByFieldId:'true' });
+    if(offset) q.set('offset', offset);
+    const data = await atFetch(AT.base+'/'+AT.table+'?'+q.toString());
+    for(const rec of data.records){
+      const key = rec.fields[AT.f.key]; if(!key) continue;
+      AT_RECIDS[key]=rec.id;
+      const raw = rec.fields[AT.f.content];
+      try{ out[key]= raw!=null ? JSON.parse(raw) : null; }catch(e){ out[key]=raw; }
+    }
+    offset = data.offset;
+  } while(offset);
+  return out;
+}
+async function atUpsert(key, val){
+  // proteção: se o valor tiver imagens em dataURL gigante (logo/fundo não migrados
+  // para o KV), guarda no Airtable uma versão sem essas imagens, para não rebentar
+  // o limite do campo. As imagens ficam no navegador até o KV estar a funcionar.
+  let safeVal = val;
+  try{
+    const s = JSON.stringify(val);
+    if(s.length > 95000){
+      const clone = JSON.parse(s);
+      const strip = o=>{ if(!o||typeof o!=='object') return;
+        for(const k in o){ const v=o[k];
+          if(typeof v==='string' && v.startsWith('data:image/')) o[k]='';
+          else if(typeof v==='object') strip(v);
+        }
+      };
+      strip(clone);
+      safeVal = clone;
+    }
+  }catch(e){}
+  const fields={};
+  fields[AT.f.key]=key;
+  fields[AT.f.type]=keyType(key);
+  fields[AT.f.content]=JSON.stringify(safeVal);
+  fields[AT.f.summary]=keySummary(key,val);
+  fields[AT.f.updated]=new Date().toISOString();
+  const rid=AT_RECIDS[key];
+  if(rid){
+    await atFetch(AT.base+'/'+AT.table+'/'+rid, {method:'PATCH', body:JSON.stringify({fields})});
+  } else {
+    const res=await atFetch(AT.base+'/'+AT.table, {method:'POST', body:JSON.stringify({records:[{fields}], typecast:true})});
+    if(res.records&&res.records[0]) AT_RECIDS[key]=res.records[0].id;
+  }
+}
+async function atDelete(key){
+  const rid=AT_RECIDS[key]; if(!rid) return;
+  try{ await atFetch(AT.base+'/'+AT.table+'/'+rid, {method:'DELETE'}); }catch(e){}
+  delete AT_RECIDS[key];
+}
+
+/* ---- API usada pela app (load/save/remove) ---- */
+async function load(key, fallback){
+  const v = await localGet(key, undefined);
+  return v===undefined ? fallback : v;
+}
+async function save(key, val){
+  await localSet(key, val);                 // instantâneo e offline-safe
+  if(AT_ONLINE){
+    try{ await atUpsert(key, val); setSyncState('ok'); }
+    catch(e){
+      console.warn('sync save falhou', key, e);
+      setSyncState('erro');
+      const msg = String(e.message||e);
+      if(/REQUEST_TOO_LARGE|too large|422/i.test(msg)) toast('Imagem grande demais para sincronizar — foi guardada localmente', 6000);
+    }
+  }
+}
+async function removeKey(key){
+  delete MEM[key];
+  if(storeOK){ try{ window.storage.delete(key); }catch(e){ storeOK=false; } }
+  if(AT_ONLINE){ try{ await atDelete(key); }catch(e){} }
+}
+
+function todayStr(){ return new Date().toISOString().slice(0,10); }
+function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
+
+/* ---- indicador de sincronização ---- */
+function setSyncState(state){
+  const p=document.getElementById('syncPill'); if(!p) return;
+  if(state==='off'){ p.style.display='none'; return; }
+  p.style.display='inline-flex';
+  if(state==='ok'){ p.textContent='☁️ Sincronizado'; p.style.color='var(--olive)'; p.style.borderColor='var(--line)'; }
+  else if(state==='sync'){ p.textContent='⏳ A sincronizar…'; p.style.color='var(--ink-soft)'; }
+  else if(state==='erro'){ p.textContent='⚠️ Erro de sincronização'; p.style.color='var(--accent-deep)'; p.style.borderColor='var(--accent)'; }
+}
+function setATStatus(html){ const e=document.getElementById('atStatus'); if(e) e.innerHTML='Estado: '+html; }
+
+/* aplica um conjunto de dados (vindo do Airtable) à app */
+async function applyDataset(data){
+  if(data.config){ CFG = Object.assign(CFG, data.config); }
+  DAILY={}; PARTIES=[]; RES=[];
+  for(const key in data){
+    try{
+      const v=data[key];
+      if(key==='config') continue;
+      if(key.startsWith('daily:')) DAILY[key.slice(6)]=v;
+      else if(key.startsWith('party:')) PARTIES.push(v);
+      else if(key.startsWith('res:')) RES.push(v);
+      else if(key.startsWith('photo:')){ /* tratado abaixo */ }
+      // guarda também na cache local para uso offline
+      try{ await localSet(key, v); }catch(e){}
+    }catch(e){ console.warn('applyDataset item falhou', key, e); }
+  }
+  // fotos: guardar dataURLs na cache local para o canvas as usar
+  for(const key in data){ if(key.startsWith('photo:')){ try{ await localSet(key, data[key]); }catch(e){} } }
+  console.log('applyDataset: '+RES.length+' reservas, '+PARTIES.length+' festas, '+Object.keys(DAILY).length+' menus diários');
+}
+
+async function connectAirtable(token, silent){
+  AT_TOKEN=(token||'').trim();
+  if(!AT_TOKEN){ toast('Cola primeiro o token'); return false; }
+  setSyncState('sync'); setATStatus('a ligar…');
+  try{
+    const data = await atPullAll();           // testa o token e puxa tudo
+    AT_ONLINE=true;
+    // se o Airtable está vazio, envia o que há localmente (primeira ligação)
+    if(Object.keys(data).length===0){
+      await pushLocalToAirtable();
+    } else {
+      await applyDataset(data);
+    }
+    setSyncState('ok');
+    setATStatus('<b style="color:var(--olive)">ligado ✓</b> — dados sincronizados entre aparelhos.');
+    reloadUIFromState();
+    if(!silent){ toast('Ligado ao Airtable ✓'); }
+    return true;
+  }catch(e){
+    AT_ONLINE=false; setSyncState('erro');
+    setATStatus('<b style="color:var(--accent-deep)">falhou</b> — verifica o token e os scopes. ('+(e.message||'')+')');
+    toast('Sincronização falhou: '+(e.message||e), 8000);
+    console.error('Airtable connect erro:', e);
+    return false;
+  }
+}
+async function pushLocalToAirtable(){
+  // envia config, menus, festas, reservas e fotos que existam localmente
+  const keys=[];
+  keys.push('config');
+  for(const d in DAILY) keys.push('daily:'+d);
+  PARTIES.forEach(p=>keys.push('party:'+p.id));
+  RES.forEach(r=>keys.push('res:'+r.id));
+  // fotos referenciadas
+  const photoIds=new Set();
+  const scan=cs=>(cs||[]).forEach(c=>(c.items||[]).forEach(it=>{ if(it.photoId) photoIds.add(it.photoId); }));
+  for(const d in DAILY) scan(DAILY[d].cats);
+  PARTIES.forEach(p=>scan(p.cats));
+  for(const pid of photoIds) keys.push('photo:'+pid);
+  for(const k of keys){
+    let v;
+    if(k==='config') v=CFG;
+    else if(k.startsWith('daily:')) v=DAILY[k.slice(6)];
+    else if(k.startsWith('party:')) v=PARTIES.find(p=>'party:'+p.id===k);
+    else if(k.startsWith('res:')) v=RES.find(r=>'res:'+r.id===k);
+    else if(k.startsWith('photo:')) v=await localGet(k,null);
+    if(v!=null) { try{ await atUpsert(k,v); }catch(e){ console.warn('push falhou',k,e); } }
+  }
+}
+function disconnectAirtable(){
+  AT_ONLINE=false; AT_RECIDS={};
+  setSyncState('off');
+}
+
+/* ============================================================
+   TEMA
+   ============================================================ */
+function applyTheme(){
+  const t = THEMES[CFG.themeIndex] || THEMES[0];
+  const r = document.documentElement.style;
+  r.setProperty('--accent', t.accent);
+  r.setProperty('--accent-deep', t.deep);
+  r.setProperty('--paper', t.paper);
+  r.setProperty('--ink', t.ink);
+  updateHeaderLogo();
+  document.getElementById('brandName').textContent = CFG.name || 'A Tua Cozinha';
+  document.getElementById('brandSub').textContent = CFG.sub || 'Gestor de menus';
+}
+
+/* ---- Logótipo ---- */
+let LOGO_IMG=null;
+function updateHeaderLogo(){
+  const box=document.getElementById('logoBox'); if(!box) return;
+  if(CFG.logo){ box.innerHTML=`<img src="${resolveImageSrc(CFG.logo)}" alt="logótipo">`; box.style.background='transparent'; box.style.boxShadow='none'; }
+  else { box.innerHTML=''; box.textContent=(CFG.initial||'C').toUpperCase(); box.style.background=''; box.style.boxShadow=''; }
+}
+function updateLogoPreview(){
+  const p=document.getElementById('logoPreview'); if(!p) return;
+  if(CFG.logo){ p.innerHTML=`<img src="${resolveImageSrc(CFG.logo)}" alt="logótipo">`; p.style.background='transparent'; }
+  else { p.innerHTML=''; p.textContent=(CFG.initial||'C').toUpperCase(); p.style.background=''; }
+}
+function loadLogo(){
+  if(CFG.logo){ const i=new Image(); i.crossOrigin='anonymous'; i.onload=()=>{ LOGO_IMG=i; refreshDailyPoster(); refreshPartyPoster(); }; i.src=resolveImageSrc(CFG.logo); }
+  else { LOGO_IMG=null; }
+}
+function processLogo(file, cb){
+  const r=new FileReader();
+  r.onload=()=>{ const img=new Image(); img.onload=()=>{
+    const max=300; let w=img.naturalWidth,h=img.naturalHeight;
+    const s=Math.min(1,max/Math.max(w,h)); w=Math.round(w*s); h=Math.round(h*s);
+    const c=document.createElement('canvas'); c.width=w; c.height=h;
+    c.getContext('2d').drawImage(img,0,0,w,h);
+    cb(c.toDataURL('image/png'));       // mantém transparência; o KV aguenta o tamanho
+  }; img.onerror=()=>toast('Imagem inválida'); img.src=r.result; };
+  r.readAsDataURL(file);
+}
+
+/* ---- armazenamento de imagens no servidor (Cloudflare KV) ----
+   guarda a imagem e devolve uma referência curta "img:ID" que sincroniza no Airtable.
+   Se o servidor falhar, devolve o próprio dataURL (funciona local, mas não sincroniza). */
+async function uploadImage(dataUrl){
+  try{
+    const r = await fetch('/api/img-put', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ dataUrl })
+    });
+    if(r.ok){ const d = await r.json(); if(d && d.id) return 'img:'+d.id; }
+  }catch(e){ console.warn('upload imagem falhou', e); }
+  return dataUrl; // fallback local
+}
+/* converte uma referência ("img:ID" ou dataURL) num URL que o navegador/canvas mostra */
+function resolveImageSrc(ref){
+  if(!ref) return '';
+  if(ref.startsWith('img:')) return '/api/img?id='+encodeURIComponent(ref.slice(4));
+  return ref; // já é dataURL ou URL
+}
+
+/* ============================================================
+   GERADOR DE IMAGEM (CANVAS) — "imagem automática"
+   ============================================================ */
+const FORMATS = {
+  post:  {w:1080, h:1080},
+  story: {w:1080, h:1920},
+  flyer: {w:1240, h:1754}, // ~A4 @150dpi
+};
+
+function fontsReady(){
+  if(document.fonts && document.fonts.ready) return document.fonts.ready;
+  return Promise.resolve();
+}
+
+function drawGrain(ctx,w,h,alpha){
+  // textura subtil de papel
+  const n = Math.floor((w*h)/900);
+  ctx.save();
+  for(let i=0;i<n;i++){
+    ctx.globalAlpha = Math.random()*alpha;
+    ctx.fillStyle = Math.random()>0.5 ? '#000' : '#fff';
+    ctx.fillRect(Math.random()*w, Math.random()*h, 1.4, 1.4);
+  }
+  ctx.restore();
+}
+
+function wrap(ctx, text, maxW){
+  const words = (text||'').split(' ');
+  const lines=[]; let cur='';
+  for(const wd of words){
+    const test = cur ? cur+' '+wd : wd;
+    if(ctx.measureText(test).width > maxW && cur){ lines.push(cur); cur=wd; }
+    else cur=test;
+  }
+  if(cur) lines.push(cur);
+  return lines;
+}
+
+/* Desenha um cartaz para um "menu" genérico
+   data = {kicker, title, subtitle, cats:[{name,items:[{name,price}]}], reserveLink} */
+function renderPoster(canvas, data, fmt, imgs){
+  imgs = imgs || {};
+  const t = THEMES[CFG.themeIndex] || THEMES[0];
+  const base = FORMATS[fmt] || FORMATS.post;
+  const w = base.w;
+  const PAD = Math.round(w*0.075);
+  const dark = darken(t.ink, 0.0);          // tinta para faixas escuras
+
+  // recolhe pratos em lista linear, marca o "destaque" (1º com preço, senão o 1º)
+  const cats = (data.cats||[]).map(c=>({name:c.name||'', items:(c.items||[]).filter(it=>it.name&&it.name.trim())}))
+                              .filter(c=>c.items.length || c.name.trim());
+  let hero=null, heroCat='';
+  for(const c of cats){ for(const it of c.items){ if(!hero){ hero=it; heroCat=c.name; } if(it.price&&it.price.trim()){ hero=it; heroCat=c.name; break; } } if(hero&&hero.price) break; }
+
+  const socialStr = socialsText();
+  const foot = [CFG.phone, CFG.addr].filter(Boolean).join('   ·   ');
+  const resvLink = data.reserveLink || '';
+
+  // ---------- medir altura ----------
+  const measure = ()=>{
+    // cabeçalho fixo (logo, nome, subtítulo, divisor)
+    let head = PAD + w*0.05 + w*0.05 + w*0.055;        // topo + logo
+    const nm=(CFG.name||'').toUpperCase().split(' ');
+    head += (nm.length>=2?2:1) * w*0.085;              // linhas do nome
+    if(CFG.sub) head += w*0.06;
+    head += w*0.06;                                     // divisor
+    let yy = head;
+    if(/* isParty */ data.isParty && data.bigTitle){
+      yy += w*0.04 + Math.max(1,Math.ceil(data.bigTitle.length/22))*w*0.062 + w*0.02;
+    }
+    // HERO: nome em palavras grandes empilhadas + selo
+    if(hero){
+      const words=hero.name.toUpperCase().split(' ').length;
+      let heroTextH = w*0.02 + (heroCat? w*0.062 : 0) + words*w*0.066 + (hero.price? w*0.18 : 0);
+      const heroPhotoH = w*0.42 + w*0.02;
+      yy += Math.max(heroTextH, heroPhotoH) + w*0.03;
+    }
+    // OUTROS pratos
+    cats.forEach(c=>{
+      const rest=c.items.filter(it=>it!==hero);
+      if(!rest.length) return;
+      if(c.name) yy += w*0.045;
+      yy += rest.length*Math.max(w*0.052, w*0.058+w*0.02) + w*0.02;
+    });
+    // rodapé escuro
+    let fh = w*0.05;
+    if(resvLink) fh += w*0.04 + w*0.17;
+    else fh += w*0.04;
+    if(foot) fh += w*0.04;
+    if(socialStr) fh += w*0.038;
+    yy += fh + PAD*0.8;
+    return yy;
+  };
+  const h = Math.max(base.h, Math.ceil(measure()));
+  canvas.width=w; canvas.height=h;
+  const ctx = canvas.getContext('2d');
+
+  // ---------- fundo de papel ----------
+  ctx.fillStyle = lighten(t.paper, 0.04); ctx.fillRect(0,0,w,h);
+  // imagem de fundo opcional (festas) com véu ajustável por cima
+  if(data.bgImg && data.bgImg.complete && data.bgImg.naturalWidth){
+    drawImageCover(ctx, data.bgImg, 0, 0, w, h, 0);
+    const veil = (typeof data.bgVeil==='number') ? data.bgVeil : 0.78;
+    ctx.fillStyle = hexA(t.paper, veil);
+    ctx.fillRect(0,0,w,h);
+  }
+  drawGrain(ctx,w,h,0.06);
+  // moldura dupla fina
+  ctx.strokeStyle = hexA(t.ink,0.55); ctx.lineWidth = Math.max(2,w*0.0035);
+  const m=Math.round(w*0.03); ctx.strokeRect(m,m,w-2*m,h-2*m);
+  ctx.strokeStyle = hexA(t.ink,0.30); ctx.lineWidth = 1.4;
+  ctx.strokeRect(m+9,m+9,w-2*m-18,h-2*m-18);
+  // cantos ornamentais
+  ornCorner(ctx, m+9, m+9, 1, 1, w*0.05, t.ink);
+  ornCorner(ctx, w-m-9, m+9, -1, 1, w*0.05, t.ink);
+  ornCorner(ctx, m+9, h-m-9, 1, -1, w*0.05, t.ink);
+  ornCorner(ctx, w-m-9, h-m-9, -1, -1, w*0.05, t.ink);
+
+  // ======================= CABEÇALHO =======================
+  ctx.textAlign='center';
+  let y = PAD + w*0.05;
+  // centro do cabeçalho: desloca p/ esquerda quando há faixa da data, p/ não chocar
+  const hasBanner = !!data.dateText;
+  const cxHead = hasBanner ? (PAD*1.1 + (w - PAD - w*0.20))/2 : w/2;
+
+  // chávena/logo no topo
+  const lr = w*0.05;
+  if(LOGO_IMG && LOGO_IMG.complete && LOGO_IMG.naturalWidth){
+    const ir=LOGO_IMG.naturalWidth/LOGO_IMG.naturalHeight; let dw,dh;
+    if(ir>1){ dw=lr*2; dh=dw/ir; } else { dh=lr*2; dw=dh*ir; }
+    ctx.drawImage(LOGO_IMG, cxHead-dw/2, y-lr, dw, dh);
+  } else {
+    drawCup(ctx, cxHead, y, lr*0.7, t.ink);
+  }
+  // pequenos ornamentos laterais ao logo
+  ctx.strokeStyle=hexA(t.ink,0.6); ctx.lineWidth=2;
+  smallFleur(ctx, cxHead-w*0.13, y, w*0.05, t.ink);
+  smallFleur(ctx, cxHead+w*0.13, y, -w*0.05, t.ink);
+  y += lr + w*0.055;
+
+  // nome do restaurante (grande, condensado)
+  ctx.fillStyle = t.ink;
+  const nameParts = (CFG.name||'').toUpperCase().split(' ');
+  // se tiver 2+ palavras, partir em duas linhas tipo "CAFÉ / CENTRAL"
+  let nameLines;
+  if(nameParts.length>=2){
+    const mid=Math.ceil(nameParts.length/2);
+    nameLines=[nameParts.slice(0,mid).join(' '), nameParts.slice(mid).join(' ')];
+  } else nameLines=[nameParts.join(' ')];
+  nameLines.forEach((ln,i)=>{
+    const fs = i===0? w*0.075 : w*0.092;
+    ctx.font = `900 ${Math.round(fs)}px Fraunces`;
+    ctx.fillText(ln, cxHead, y);
+    y += fs*0.92;
+  });
+  y += w*0.01;
+
+  // subtítulo numa faixa escura (tipo "SOBRADELO DA GOMA")
+  if(CFG.sub){
+    ctx.font = `700 ${Math.round(w*0.026)}px "Hanken Grotesk"`;
+    const sw = ctx.measureText(CFG.sub.toUpperCase()).width + w*0.10;
+    const sh = w*0.05;
+    ctx.fillStyle = t.ink;
+    ribbon(ctx, cxHead-sw/2, y-sh*0.5, sw, sh, t.ink);
+    ctx.fillStyle = t.paper;
+    ctx.textBaseline='middle';
+    ctx.fillText(letterSpace(CFG.sub.toUpperCase(),1), cxHead, y);
+    ctx.textBaseline='alphabetic';
+    y += sh*0.7;
+  }
+  y += w*0.02;
+  // ornamento divisor
+  fleurDivider(ctx, cxHead, y, w*0.06, t.ink);
+  y += w*0.03;
+
+  // ======================= FAIXA DA DATA (canto sup. dir.) =======================
+  if(data.dateText){
+    drawDateBanner(ctx, w, PAD, data.dateText, t);
+  }
+
+  // título do evento (festas) — por baixo do cabeçalho
+  if(data.isParty && data.bigTitle){
+    ctx.textAlign='center'; ctx.fillStyle=t.accent;
+    ctx.font=`700 ${Math.round(w*0.022)}px "Hanken Grotesk"`;
+    ctx.fillText(letterSpace('MENU DE FESTA',3), w/2, y);
+    y += w*0.04;
+    ctx.fillStyle=t.ink;
+    let fs=w*0.06; ctx.font=`italic 600 ${Math.round(fs)}px Fraunces`;
+    wrap(ctx, data.bigTitle, w-PAD*2.4).forEach(l=>{ ctx.fillText(l,w/2,y); y+=fs*1.02; });
+    y += w*0.02;
+  }
+
+  // ======================= HERO: prato principal grande + foto =======================
+  const heroTop = y;
+  const photoBoxX = w*0.52, photoBoxW = w - photoBoxX - PAD*0.8;
+  // foto do hero (à direita) se existir
+  let heroImg = hero && hero.photoId && imgs[hero.photoId];
+  if(heroImg){
+    const ph = w*0.42, pw = photoBoxW;
+    drawImageCover(ctx, heroImg, photoBoxX, heroTop, pw, ph, w*0.02);
+    ctx.strokeStyle=hexA(t.ink,0.5); ctx.lineWidth=Math.max(2,w*0.003);
+    roundRect(ctx, photoBoxX, heroTop, pw, ph, w*0.02); ctx.stroke();
+  } else if(hero){
+    // ilustração grande do hero
+    const cx=photoBoxX+photoBoxW/2, cy=heroTop+w*0.2, R=Math.min(photoBoxW,w*0.4)*0.42;
+    ctx.fillStyle=hexA(t.accent,0.10); ctx.beginPath(); ctx.arc(cx,cy,R*1.25,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle=hexA(t.ink,0.25); ctx.lineWidth=2; ctx.beginPath(); ctx.arc(cx,cy,R*1.25,0,Math.PI*2); ctx.stroke();
+    ctx.save(); ctx.strokeStyle=t.ink; ctx.fillStyle=t.ink; ctx.lineWidth=Math.max(3,w*0.006); ctx.lineJoin='round'; ctx.lineCap='round';
+    (pickMotif(hero.name))(ctx,cx,cy,R*0.85,t.ink,t.ink,t.paper); ctx.restore();
+  }
+
+  // texto do hero (à esquerda)
+  let hy = heroTop + w*0.02;
+  const heroX = PAD*1.1;
+  if(heroCat){
+    ctx.textAlign='left';
+    ctx.fillStyle = t.accent;
+    ctx.font = `italic 600 ${Math.round(w*0.034)}px Fraunces`;
+    ctx.fillText(heroCat, heroX, hy);
+    hy += w*0.012;
+    ctx.strokeStyle=hexA(t.accent,0.7); ctx.lineWidth=2;
+    ctx.beginPath(); ctx.moveTo(heroX, hy); ctx.lineTo(heroX+w*0.18, hy); ctx.stroke();
+    hy += w*0.05;
+  }
+  if(hero){
+    // nome do prato em palavras grandes empilhadas
+    const words = hero.name.toUpperCase().split(' ');
+    ctx.textAlign='left'; ctx.fillStyle=t.ink;
+    const maxNameW = w*0.46;
+    words.forEach(word=>{
+      let fs=w*0.07;
+      ctx.font=`900 ${Math.round(fs)}px Fraunces`;
+      while(ctx.measureText(word).width>maxNameW && fs>w*0.03){ fs*=0.92; ctx.font=`900 ${Math.round(fs)}px Fraunces`; }
+      ctx.fillText(word, heroX, hy);
+      hy += fs*0.94;
+    });
+    // selo do preço
+    if(hero.price && hero.price.trim()){
+      let pr=hero.price.trim(); if(/^\d/.test(pr)&&!pr.includes('€')) pr+='€';
+      const sealR=w*0.075, sx=heroX+sealR, sy=hy+sealR*0.5;
+      priceSeal(ctx, sx, sy, sealR, pr, t);
+      hy = sy+sealR+w*0.02;
+    }
+  }
+  // a próxima zona começa abaixo do mais baixo (texto ou foto)
+  y = Math.max(hy, heroTop + (heroImg? w*0.42 : w*0.42) ) + w*0.03;
+
+  // ======================= OUTROS PRATOS =======================
+  const left=PAD*1.1, right=w-PAD*1.1;
+  cats.forEach(cat=>{
+    const rest = cat.items.filter(it=> it!==hero);
+    if(!rest.length) return;                       // nada a listar nesta secção
+    if(cat.name){
+      ctx.textAlign='center'; ctx.fillStyle=t.accent;
+      ctx.font=`700 ${Math.round(w*0.026)}px "Hanken Grotesk"`;
+      ctx.fillText(letterSpace(cat.name.toUpperCase(),2), w/2, y);
+      y += w*0.045;
+    }
+    const ts=w*0.058, nameSize=Math.round(w*0.028), textLeft=left+ts+w*0.02;
+    rest.forEach(it=>{
+      const tyc=y-nameSize*0.7;
+      const img=it.photoId&&imgs[it.photoId];
+      if(img){ drawImageCover(ctx,img,left,tyc,ts,ts,ts*0.22); ctx.strokeStyle=hexA(t.ink,0.4); ctx.lineWidth=1.4; roundRect(ctx,left,tyc,ts,ts,ts*0.22); ctx.stroke(); }
+      else { ctx.save(); ctx.fillStyle=hexA(t.accent,0.10); roundRect(ctx,left,tyc,ts,ts,ts*0.22); ctx.fill(); ctx.strokeStyle=t.ink; ctx.fillStyle=t.ink; ctx.lineWidth=Math.max(1.4,w*0.0022); ctx.lineJoin='round'; ctx.lineCap='round'; (pickMotif(it.name))(ctx,left+ts/2,tyc+ts/2,ts*0.32,t.ink,t.ink,t.paper); ctx.restore(); }
+      ctx.textAlign='left'; ctx.fillStyle=t.ink; ctx.font=`500 ${nameSize}px "Hanken Grotesk"`;
+      ctx.fillText(it.name.trim(), textLeft, y);
+      const nameW=ctx.measureText(it.name.trim()).width;
+      let priceW=0,pr='';
+      if(it.price&&it.price.trim()){ pr=it.price.trim(); if(/^\d/.test(pr)&&!pr.includes('€'))pr+=' €'; ctx.textAlign='right'; ctx.fillStyle=t.accent; ctx.font=`700 ${nameSize}px "Hanken Grotesk"`; priceW=ctx.measureText(pr).width; ctx.fillText(pr,right,y); }
+      const ds=textLeft+nameW+12, de=right-priceW-12;
+      if(de>ds){ ctx.strokeStyle=hexA(t.ink,0.3); ctx.lineWidth=1.3; ctx.setLineDash([2,6]); ctx.beginPath(); ctx.moveTo(ds,y-nameSize*0.3); ctx.lineTo(de,y-nameSize*0.3); ctx.stroke(); ctx.setLineDash([]); }
+      y += Math.max(w*0.052, ts+w*0.02);
+    });
+    y += w*0.02;
+  });
+
+  // ======================= RODAPÉ ESCURO (extras + reservas + contacto) =======================
+  let fh = w*0.05;
+  if(resvLink) fh += w*0.04 + w*0.17;
+  if(foot) fh += w*0.04;
+  if(socialStr) fh += w*0.038;
+  // o rodapé encosta ao fundo, MAS nunca por cima dos pratos
+  const footTop = Math.max(y + w*0.01, h - m - 9 - fh);
+  const footBottom = Math.max(h - m - 9, footTop + fh);
+  ctx.fillStyle = t.ink;
+  roundRect(ctx, m+9, footTop, w-2*m-18, footBottom-footTop, w*0.015); ctx.fill();
+
+  let fy = footTop + w*0.06;
+  ctx.textAlign='center';
+
+  if(resvLink){
+    ctx.fillStyle = lighten(t.accent,0.25);
+    ctx.font=`700 ${Math.round(w*0.024)}px "Hanken Grotesk"`;
+    ctx.fillText(letterSpace('RESERVE AQUI',2), w/2, fy);
+    fy += w*0.03;
+    const qs=w*0.15;
+    drawQR(ctx, resvLink, w/2-qs/2, fy, qs);
+    fy += qs + w*0.035;
+  } else if(cats.length){
+    // "Menu inclui" estilo, se não houver reservas mostra ornamento
+    ctx.fillStyle = lighten(t.accent,0.25);
+    ctx.font=`italic 600 ${Math.round(w*0.034)}px Fraunces`;
+    ctx.fillText('Bom apetite', w/2, fy);
+    fy += w*0.04;
+  }
+  if(foot){
+    ctx.fillStyle = hexA(t.paper,0.92);
+    ctx.font=`600 ${Math.round(w*0.02)}px "Hanken Grotesk"`;
+    ctx.fillText(foot, w/2, fy); fy += w*0.034;
+  }
+  if(socialStr){
+    ctx.fillStyle = lighten(t.accent,0.3);
+    ctx.font=`700 ${Math.round(w*0.021)}px "Hanken Grotesk"`;
+    ctx.fillText(socialStr, w/2, fy);
+  }
+}
+
+/* ---------- elementos decorativos do estilo Café Central ---------- */
+function lighten(hex,a){ const c=hex.replace('#',''); const n=parseInt(c.length===3?c.split('').map(x=>x+x).join(''):c,16); let r=(n>>16)&255,g=(n>>8)&255,b=n&255; r+=(255-r)*a; g+=(255-g)*a; b+=(255-b)*a; return `rgb(${r|0},${g|0},${b|0})`; }
+function darken(hex,a){ const c=hex.replace('#',''); const n=parseInt(c.length===3?c.split('').map(x=>x+x).join(''):c,16); let r=(n>>16)&255,g=(n>>8)&255,b=n&255; r*=(1-a); g*=(1-a); b*=(1-a); return `rgb(${r|0},${g|0},${b|0})`; }
+function drawCup(ctx,x,y,r,col){
+  ctx.save(); ctx.strokeStyle=col; ctx.fillStyle=col; ctx.lineWidth=Math.max(2,r*0.14); ctx.lineJoin='round'; ctx.lineCap='round';
+  // vapor
+  for(let i=-1;i<=1;i++){ const sx=x+i*r*0.4; ctx.beginPath(); ctx.moveTo(sx,y-r*0.6); ctx.bezierCurveTo(sx+r*0.3,y-r*0.9,sx-r*0.3,y-r*1.2,sx,y-r*1.5); ctx.stroke(); }
+  // chávena
+  ctx.beginPath(); ctx.moveTo(x-r,y-r*0.1); ctx.lineTo(x+r,y-r*0.1); ctx.lineTo(x+r*0.7,y+r*0.7); ctx.quadraticCurveTo(x,y+r*0.95,x-r*0.7,y+r*0.7); ctx.closePath(); ctx.stroke();
+  ctx.beginPath(); ctx.arc(x+r*0.95,y+r*0.15,r*0.28,-Math.PI*0.5,Math.PI*0.5); ctx.stroke();
+  // pires
+  ctx.beginPath(); ctx.moveTo(x-r*1.2,y+r*0.95); ctx.lineTo(x+r*1.2,y+r*0.95); ctx.stroke();
+  ctx.restore();
+}
+function smallFleur(ctx,x,y,len,col){ ctx.strokeStyle=hexA(col,0.6); ctx.fillStyle=hexA(col,0.6); ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(x+len,y); ctx.stroke(); ctx.beginPath(); ctx.arc(x+len,y,Math.abs(len)*0.06,0,Math.PI*2); ctx.fill(); }
+function fleurDivider(ctx,x,y,len,col){ ctx.strokeStyle=hexA(col,0.55); ctx.fillStyle=hexA(col,0.55); ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(x-len,y); ctx.lineTo(x-len*0.2,y); ctx.moveTo(x+len*0.2,y); ctx.lineTo(x+len,y); ctx.stroke(); ctx.save(); ctx.translate(x,y); ctx.rotate(Math.PI/4); ctx.strokeRect(-len*0.07,-len*0.07,len*0.14,len*0.14); ctx.restore(); }
+function ribbon(ctx,x,y,wd,ht,col){ ctx.fillStyle=col; ctx.beginPath(); const notch=ht*0.4; ctx.moveTo(x,y); ctx.lineTo(x+wd,y); ctx.lineTo(x+wd-notch,y+ht/2); ctx.lineTo(x+wd,y+ht); ctx.lineTo(x,y+ht); ctx.lineTo(x+notch,y+ht/2); ctx.closePath(); ctx.fill(); }
+function ornCorner(ctx,x,y,sx,sy,s,col){ ctx.save(); ctx.strokeStyle=hexA(col,0.5); ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(x+sx*s,y); ctx.lineTo(x,y); ctx.lineTo(x,y+sy*s); ctx.stroke(); ctx.beginPath(); ctx.arc(x+sx*s*1.4,y+sy*s*1.4,s*0.12,0,Math.PI*2); ctx.stroke(); ctx.restore(); }
+function priceSeal(ctx,x,y,r,text,t){
+  ctx.save();
+  ctx.fillStyle=t.ink; ctx.beginPath();
+  const sp=28; for(let i=0;i<sp;i++){ const a=(i/sp)*Math.PI*2; const rr=r*(i%2?0.92:1); const px=x+Math.cos(a)*rr, py=y+Math.sin(a)*rr; i?ctx.lineTo(px,py):ctx.moveTo(px,py); }
+  ctx.closePath(); ctx.fill();
+  // tracejado interior
+  ctx.strokeStyle=hexA(t.paper,0.7); ctx.lineWidth=2; ctx.setLineDash([3,4]); ctx.beginPath(); ctx.arc(x,y,r*0.78,0,Math.PI*2); ctx.stroke(); ctx.setLineDash([]);
+  ctx.fillStyle=t.paper; ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.font=`900 ${Math.round(r*0.72)}px Fraunces`; ctx.fillText(text, x, y+r*0.04);
+  ctx.textBaseline='alphabetic'; ctx.restore();
+}
+function drawDateBanner(ctx,w,PAD,dateText,t){
+  // faixa vertical escura no canto superior direito com a data
+  const bx=w-PAD-w*0.18, bw=w*0.20, by=PAD*0.4, bh=w*0.30;
+  ctx.save();
+  ctx.fillStyle=t.ink;
+  ctx.beginPath(); ctx.moveTo(bx,by); ctx.lineTo(bx+bw,by); ctx.lineTo(bx+bw,by+bh); ctx.lineTo(bx+bw/2,by+bh-w*0.04); ctx.lineTo(bx,by+bh); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle=hexA(t.paper,0.5); ctx.lineWidth=1.5; ctx.setLineDash([3,4]);
+  ctx.strokeRect(bx+w*0.012,by+w*0.012,bw-w*0.024,bh-w*0.06); ctx.setLineDash([]);
+  // texto da data: "Terça, 2 jun"
+  const parts=(dateText||'').split(/[, ]+/).filter(Boolean);  // ["Terça","2","jun"]
+  ctx.fillStyle=t.paper; ctx.textAlign='center';
+  let ty=by+w*0.055;
+  if(parts[0]){ ctx.font=`italic 600 ${Math.round(w*0.026)}px Fraunces`; ctx.fillText(parts[0].toLowerCase()+',', bx+bw/2, ty); ty+=w*0.075; }
+  if(parts[1]){ ctx.font=`900 ${Math.round(w*0.085)}px Fraunces`; ctx.fillText(parts[1], bx+bw/2, ty); ty+=w*0.06; }
+  if(parts[2]){ ctx.font=`italic 500 ${Math.round(w*0.03)}px Fraunces`; ctx.fillText(parts[2].toLowerCase(), bx+bw/2, ty); }
+  ctx.restore();
+}
+
+/* ============================================================
+   CARTÃO ILUSTRADO POR PRATO (gerado automaticamente)
+   ============================================================ */
+const MOTIFS = [
+  {k:['peixe','bacalhau','robalo','dourada','salm','atum','sardinh','pescada','linguad','truta','cherne','garoupa'], f:mFish},
+  {k:['camar','gamba','marisc','amêijoa','ameijoa','polvo','lula','choco','lagosta','sapateira','búzio','perceb'], f:mShrimp},
+  {k:['frango','galinha','pato','peru','codorniz','perdiz'], f:mChicken},
+  {k:['bife','carne','vitela','porco','vaca','costelet','entrecosto','febras','lombo','picanha','alcatra','bitoque','leitão','leitao','cabrito','borrego'], f:mSteak},
+  {k:['sopa','caldo','creme','caldeirada','canja','açorda','acorda','gaspacho'], f:mSoup},
+  {k:['salada','legum','vegetarian','vegan','grelos','espinafr','couve'], f:mSalad},
+  {k:['massa','esparguete','espaguete','lasanha','tagliat','penne','noodle','talharim','fettuc'], f:mPasta},
+  {k:['arroz','risoto','risotto'], f:mRice},
+  {k:['pizza'], f:mPizza},
+  {k:['hambúrg','hamburg','burger'], f:mBurger},
+  {k:['sobremesa','bolo','doce','mousse','tarte','pudim','pastel','baba','torta','cheesecake'], f:mCake},
+  {k:['gelado','sorvete'], f:mIce},
+  {k:['vinho','bebida','sumo','cerveja','água','agua','refrig','sangria','cocktail'], f:mDrink},
+  {k:['café','cafe','chá','cha ','cappuc','galão','galao','expresso'], f:mCoffee},
+  {k:['pão','pao','tosta','sande','sandes','torrada','bruschetta','prego'], f:mBread},
+  {k:['ovo','omelete','omeleta','mexidos'], f:mEgg},
+  {k:['queijo'], f:mCheese},
+];
+function pickMotif(name){
+  const n=(name||'').toLowerCase();
+  for(const m of MOTIFS) if(m.k.some(kw=>n.includes(kw))) return m.f;
+  return mCloche;
+}
+function drawImageCover(ctx,img,x,y,w,h,r){
+  ctx.save();
+  roundRect(ctx,x,y,w,h,r); ctx.clip();
+  const ir=img.naturalWidth/img.naturalHeight, rr=w/h;
+  let dw,dh,dx,dy;
+  if(ir>rr){ dh=h; dw=h*ir; dx=x-(dw-w)/2; dy=y; }
+  else { dw=w; dh=w/ir; dx=x; dy=y-(dh-h)/2; }
+  ctx.drawImage(img,dx,dy,dw,dh);
+  ctx.restore();
+}
+
+/* ---- QR-code (reservas) ---- */
+const QR_CACHE={};
+function getQRMatrix(text){
+  if(!window.qrcode || !text) return null;
+  if(QR_CACHE[text]) return QR_CACHE[text];
+  try{
+    const qr=qrcode(0,'M'); qr.addData(text); qr.make();
+    const n=qr.getModuleCount(); const m=[];
+    for(let r=0;r<n;r++){ const row=[]; for(let c=0;c<n;c++) row.push(qr.isDark(r,c)); m.push(row); }
+    const res={n,m}; QR_CACHE[text]=res; return res;
+  }catch(e){ return null; }
+}
+function drawQR(ctx, text, x, y, size){
+  const qr=getQRMatrix(text); if(!qr) return false;
+  // painel branco (zona de silêncio) para garantir leitura
+  ctx.fillStyle='#ffffff';
+  roundRect(ctx,x,y,size,size,size*0.06); ctx.fill();
+  const quiet=size*0.085, inner=size-2*quiet, cell=inner/qr.n;
+  ctx.fillStyle='#141414';
+  for(let r=0;r<qr.n;r++) for(let c=0;c<qr.n;c++) if(qr.m[r][c]){
+    ctx.fillRect(x+quiet+c*cell, y+quiet+r*cell, Math.ceil(cell)+0.5, Math.ceil(cell)+0.5);
+  }
+  return true;
+}
+function prettyLink(u){
+  return (u||'').replace(/^https?:\/\//,'').replace(/^mailto:/,'').replace(/^tel:/,'').replace(/\/$/,'');
+}
+/* base do site (publicado) ou o endereço atual */
+function siteBase(){
+  if(typeof SITE_URL!=='undefined' && SITE_URL) return SITE_URL.replace(/\/$/,'');
+  const o=location.origin, p=location.pathname.replace(/\/[^/]*$/,'');
+  return o + (p||'');
+}
+/* link do formulário de reserva para um menu/evento (data fixa) */
+function buildReserveLink(kind, dateStr, title, key){
+  // link curto: só a chave. O formulário busca nome/logo/menu/data ao servidor.
+  const params=new URLSearchParams();
+  if(key) params.set('k', key);
+  return siteBase() + '/reservar.html?' + params.toString();
+}
+function ensureQR(cb){
+  if(window.qrcode) return cb && cb();
+  // a biblioteca pode ainda estar a carregar do CDN; tenta de novo em breve
+  let tries=0; const t=setInterval(()=>{ if(window.qrcode||++tries>20){ clearInterval(t); cb&&cb(); } },150);
+}
+function renderDishCard(canvas, item, size, img){
+  const t=THEMES[CFG.themeIndex]||THEMES[0];
+  size=size||1080; const w=size,h=size;
+  canvas.width=w; canvas.height=h;
+  const ctx=canvas.getContext('2d');
+  const TAU=Math.PI*2;
+  ctx.fillStyle=t.paper; ctx.fillRect(0,0,w,h);
+  // arcos decorativos
+  ctx.save();
+  ctx.fillStyle=hexA(t.accent,0.08); ctx.beginPath(); ctx.arc(w*0.92,h*0.10,w*0.22,0,TAU); ctx.fill();
+  ctx.fillStyle=hexA(t.accent,0.06); ctx.beginPath(); ctx.arc(w*0.06,h*0.93,w*0.18,0,TAU); ctx.fill();
+  ctx.restore();
+  // moldura
+  const m=Math.round(w*0.045);
+  ctx.strokeStyle=hexA(t.accent,0.85); ctx.lineWidth=Math.max(2,w*0.004); ctx.strokeRect(m,m,w-2*m,h-2*m);
+  ctx.strokeStyle=hexA(t.ink,0.22); ctx.lineWidth=Math.max(1,w*0.0014); ctx.strokeRect(m+w*0.012,m+w*0.012,w-2*m-w*0.024,h-2*m-w*0.024);
+  // kicker (nome do restaurante)
+  ctx.textAlign='center';
+  ctx.fillStyle=t.accent; ctx.font=`700 ${Math.round(w*0.024)}px "Hanken Grotesk"`;
+  ctx.fillText(letterSpace((CFG.name||'').toUpperCase(),2), w/2, h*0.135);
+
+  const hasPhoto = img && img.complete && img.naturalWidth;
+  let y;
+  if(hasPhoto){
+    // FOTOGRAFIA REAL como herói
+    const px=w*0.10, pw=w-2*px, py=h*0.165, ph=h*0.45, rad=w*0.045;
+    drawImageCover(ctx,img,px,py,pw,ph,rad);
+    ctx.strokeStyle=hexA(t.accent,0.9); ctx.lineWidth=Math.max(3,w*0.005);
+    roundRect(ctx,px,py,pw,ph,rad); ctx.stroke();
+    y=h*0.685;
+  } else {
+    // ilustração (reserva)
+    const cx=w/2, cy=h*0.40, R=w*0.18;
+    ctx.fillStyle=hexA(t.accent,0.10); ctx.beginPath(); ctx.arc(cx,cy,R*1.32,0,TAU); ctx.fill();
+    ctx.strokeStyle=hexA(t.ink,0.18); ctx.lineWidth=Math.max(2,w*0.002);
+    ctx.beginPath(); ctx.arc(cx,cy,R*1.32,0,TAU); ctx.stroke();
+    ctx.beginPath(); ctx.arc(cx,cy,R*1.10,0,TAU); ctx.stroke();
+    ctx.save();
+    ctx.strokeStyle=t.accent; ctx.fillStyle=t.accent;
+    ctx.lineWidth=Math.max(3,w*0.007); ctx.lineJoin='round'; ctx.lineCap='round';
+    (pickMotif(item.name))(ctx,cx,cy,R*0.80,t.accent,t.ink,t.paper);
+    ctx.restore();
+    y=h*0.645;
+  }
+  // separador
+  const cx=w/2;
+  ctx.strokeStyle=hexA(t.accent,0.6); ctx.lineWidth=Math.max(2,w*0.002);
+  ctx.beginPath(); ctx.moveTo(cx-w*0.075,y); ctx.lineTo(cx+w*0.075,y); ctx.stroke();
+  ctx.fillStyle=t.accent; ctx.beginPath(); ctx.arc(cx,y,w*0.009,0,TAU); ctx.fill();
+  // nome do prato
+  y += h*0.075;
+  ctx.fillStyle=t.ink; ctx.font=`italic 600 ${Math.round(w*0.056)}px Fraunces`;
+  const nm=(item.name&&item.name.trim())?item.name.trim():'Novo prato';
+  wrap(ctx,nm,w*0.78).slice(0,2).forEach(l=>{ ctx.fillText(l,cx,y); y+=w*0.063; });
+  // preço
+  if(item.price&&item.price.trim()){
+    let pr=item.price.trim(); if(/^\d/.test(pr)&&!pr.includes('€')) pr+=' €';
+    ctx.fillStyle=t.accent; ctx.font=`700 ${Math.round(w*0.04)}px "Hanken Grotesk"`;
+    ctx.fillText(pr,cx,y+w*0.005);
+  }
+  drawGrain(ctx,w,h,0.05);
+}
+
+/* ---- Ilustrações (vetoriais) — assinatura (ctx,x,y,r,col,ink,paper) ---- */
+const T2=Math.PI*2;
+function mCloche(ctx,x,y,r){
+  ctx.beginPath(); ctx.arc(x,y+r*0.18,r*0.9,Math.PI,0); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x-r*0.95,y+r*0.18); ctx.lineTo(x+r*0.95,y+r*0.18); ctx.stroke();
+  ctx.beginPath(); ctx.arc(x,y-r*0.78,r*0.09,0,T2); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x,y-r*0.69); ctx.lineTo(x,y-r*0.55); ctx.stroke();
+}
+function mFish(ctx,x,y,r){
+  ctx.beginPath(); ctx.ellipse(x-r*0.1,y,r*0.8,r*0.5,0,0,T2); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x+r*0.6,y); ctx.lineTo(x+r,y-r*0.42); ctx.lineTo(x+r,y+r*0.42); ctx.closePath(); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x-r*0.15,y-r*0.5); ctx.quadraticCurveTo(x,y-r*0.78,x+r*0.22,y-r*0.45); ctx.stroke();
+  ctx.beginPath(); ctx.arc(x-r*0.55,y-r*0.12,r*0.07,0,T2); ctx.fill();
+}
+function mShrimp(ctx,x,y,r){
+  ctx.beginPath(); ctx.arc(x,y,r*0.6,Math.PI*0.15,Math.PI*1.5); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x+r*0.55,y+r*0.18); ctx.lineTo(x+r*0.85,y+r*0.45); ctx.stroke();
+  for(let i=0;i<4;i++){ const a=Math.PI*0.55+i*0.28; ctx.beginPath(); ctx.moveTo(x+Math.cos(a)*r*0.6,y+Math.sin(a)*r*0.6); ctx.lineTo(x+Math.cos(a)*r*0.88,y+Math.sin(a)*r*0.88); ctx.stroke(); }
+  ctx.beginPath(); ctx.arc(x-r*0.5,y-r*0.32,r*0.07,0,T2); ctx.fill();
+}
+function mChicken(ctx,x,y,r){
+  ctx.beginPath(); ctx.arc(x+r*0.05,y-r*0.12,r*0.5,0,T2); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x+r*0.35,y+r*0.22); ctx.lineTo(x+r*0.78,y+r*0.66); ctx.stroke();
+  ctx.beginPath(); ctx.arc(x+r*0.86,y+r*0.7,r*0.13,0,T2); ctx.stroke();
+  ctx.beginPath(); ctx.arc(x+r*0.96,y+r*0.54,r*0.11,0,T2); ctx.stroke();
+}
+function mSteak(ctx,x,y,r){
+  ctx.beginPath(); ctx.ellipse(x,y,r*0.82,r*0.6,0,0,T2); ctx.stroke();
+  ctx.beginPath(); ctx.ellipse(x,y,r*0.5,r*0.32,0,0,T2); ctx.stroke();
+  for(let i=-1;i<=1;i++){ ctx.beginPath(); ctx.moveTo(x-r*0.28,y+i*r*0.18); ctx.lineTo(x+r*0.3,y+i*r*0.18-r*0.04); ctx.stroke(); }
+}
+function mSoup(ctx,x,y,r){
+  ctx.beginPath(); ctx.arc(x,y+r*0.1,r*0.8,0,Math.PI); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x-r*0.92,y+r*0.1); ctx.lineTo(x+r*0.92,y+r*0.1); ctx.stroke();
+  for(let i=-1;i<=1;i++){ const sx=x+i*r*0.4; ctx.beginPath(); ctx.moveTo(sx,y-r*0.18); ctx.bezierCurveTo(sx+r*0.16,y-r*0.42,sx-r*0.16,y-r*0.6,sx,y-r*0.85); ctx.stroke(); }
+}
+function mSalad(ctx,x,y,r){
+  ctx.beginPath(); ctx.arc(x,y+r*0.15,r*0.8,0.12,Math.PI-0.12); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x-r*0.82,y+r*0.18); ctx.lineTo(x+r*0.82,y+r*0.18); ctx.stroke();
+  for(let i=-1;i<=1;i++){ ctx.beginPath(); ctx.ellipse(x+i*r*0.4,y-r*0.05,r*0.22,r*0.32,i*0.5,0,T2); ctx.stroke(); }
+}
+function mPasta(ctx,x,y,r){
+  ctx.beginPath(); ctx.ellipse(x,y+r*0.22,r*0.9,r*0.3,0,0,T2); ctx.stroke();
+  ctx.beginPath();
+  for(let a=0;a<Math.PI*5;a+=0.18){ const rr=r*0.06+a*r*0.05; const px=x+Math.cos(a)*rr*0.85; const py=y-r*0.05+Math.sin(a)*rr*0.4; a===0?ctx.moveTo(px,py):ctx.lineTo(px,py); }
+  ctx.stroke();
+}
+function mRice(ctx,x,y,r){
+  ctx.beginPath(); ctx.arc(x,y+r*0.15,r*0.8,0,Math.PI); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x-r*0.82,y+r*0.15); ctx.lineTo(x+r*0.82,y+r*0.15); ctx.stroke();
+  ctx.beginPath(); ctx.arc(x,y+r*0.12,r*0.58,Math.PI,0); ctx.stroke();
+  for(let i=-2;i<=2;i++){ ctx.beginPath(); ctx.moveTo(x+i*r*0.18,y-r*0.08); ctx.lineTo(x+i*r*0.18+r*0.05,y-r*0.18); ctx.stroke(); }
+}
+function mPizza(ctx,x,y,r){
+  ctx.beginPath(); ctx.moveTo(x,y-r*0.72); ctx.lineTo(x-r*0.6,y+r*0.6); ctx.lineTo(x+r*0.6,y+r*0.6); ctx.closePath(); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x-r*0.6,y+r*0.6); ctx.quadraticCurveTo(x,y+r*0.48,x+r*0.6,y+r*0.6); ctx.stroke();
+  ctx.beginPath(); ctx.arc(x,y+r*0.05,r*0.1,0,T2); ctx.fill();
+  ctx.beginPath(); ctx.arc(x-r*0.18,y+r*0.3,r*0.08,0,T2); ctx.fill();
+  ctx.beginPath(); ctx.arc(x+r*0.2,y+r*0.32,r*0.08,0,T2); ctx.fill();
+}
+function mBurger(ctx,x,y,r){
+  ctx.beginPath(); ctx.arc(x,y-r*0.22,r*0.7,Math.PI,0); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x-r*0.7,y-r*0.22); ctx.lineTo(x+r*0.7,y-r*0.22); ctx.stroke();
+  roundRect(ctx,x-r*0.7,y-r*0.1,r*1.4,r*0.24,r*0.1); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x-r*0.7,y+r*0.22); for(let i=0;i<=6;i++){ ctx.lineTo(x-r*0.7+i*r*0.233,y+r*0.22+((i%2)?r*0.08:0)); } ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x-r*0.7,y+r*0.38); ctx.quadraticCurveTo(x,y+r*0.62,x+r*0.7,y+r*0.38); ctx.stroke();
+}
+function mCake(ctx,x,y,r){
+  ctx.beginPath(); ctx.moveTo(x,y-r*0.5); ctx.lineTo(x-r*0.55,y+r*0.5); ctx.lineTo(x+r*0.55,y+r*0.5); ctx.closePath(); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x-r*0.3,y); ctx.lineTo(x+r*0.3,y); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x-r*0.42,y+r*0.25); ctx.lineTo(x+r*0.42,y+r*0.25); ctx.stroke();
+  ctx.beginPath(); ctx.arc(x,y-r*0.62,r*0.12,0,T2); ctx.fill();
+}
+function mIce(ctx,x,y,r){
+  ctx.beginPath(); ctx.moveTo(x-r*0.4,y-r*0.1); ctx.lineTo(x,y+r*0.72); ctx.lineTo(x+r*0.4,y-r*0.1); ctx.stroke();
+  ctx.beginPath(); ctx.arc(x-r*0.14,y-r*0.42,r*0.26,0,T2); ctx.stroke();
+  ctx.beginPath(); ctx.arc(x+r*0.18,y-r*0.4,r*0.24,0,T2); ctx.stroke();
+  ctx.beginPath(); ctx.arc(x,y-r*0.18,r*0.3,0,T2); ctx.stroke();
+  for(let i=-1;i<=1;i++){ ctx.beginPath(); ctx.moveTo(x+i*r*0.16-r*0.1,y+r*0.05); ctx.lineTo(x+i*r*0.16+r*0.1,y+r*0.38); ctx.stroke(); }
+}
+function mDrink(ctx,x,y,r,col){
+  ctx.beginPath(); ctx.moveTo(x-r*0.5,y-r*0.6); ctx.quadraticCurveTo(x,y+r*0.25,x,y+r*0.25); ctx.quadraticCurveTo(x,y+r*0.25,x+r*0.5,y-r*0.6); ctx.closePath(); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x,y+r*0.25); ctx.lineTo(x,y+r*0.68); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x-r*0.32,y+r*0.68); ctx.lineTo(x+r*0.32,y+r*0.68); ctx.stroke();
+  ctx.fillStyle=hexA(col,0.3);
+  ctx.beginPath(); ctx.moveTo(x-r*0.32,y-r*0.22); ctx.quadraticCurveTo(x,y+r*0.2,x+r*0.32,y-r*0.22); ctx.closePath(); ctx.fill();
+  ctx.fillStyle=col;
+}
+function mCoffee(ctx,x,y,r){
+  roundRect(ctx,x-r*0.5,y-r*0.32,r*0.92,r*0.78,r*0.1); ctx.stroke();
+  ctx.beginPath(); ctx.arc(x+r*0.5,y+r*0.05,r*0.24,Math.PI*1.5,Math.PI*0.5); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x-r*0.68,y+r*0.5); ctx.lineTo(x+r*0.6,y+r*0.5); ctx.stroke();
+  for(let i=-1;i<=1;i++){ const sx=x-r*0.05+i*r*0.24; ctx.beginPath(); ctx.moveTo(sx,y-r*0.46); ctx.bezierCurveTo(sx+r*0.12,y-r*0.62,sx-r*0.12,y-r*0.78,sx,y-r*0.95); ctx.stroke(); }
+}
+function mBread(ctx,x,y,r){
+  ctx.beginPath(); ctx.ellipse(x,y,r*0.85,r*0.5,0,0,T2); ctx.stroke();
+  for(let i=-1;i<=1;i++){ ctx.beginPath(); ctx.moveTo(x+i*r*0.35-r*0.1,y-r*0.2); ctx.lineTo(x+i*r*0.35+r*0.1,y); ctx.stroke(); }
+}
+function mEgg(ctx,x,y,r,col){
+  ctx.beginPath(); ctx.ellipse(x,y,r*0.82,r*0.6,0,0,T2); ctx.stroke();
+  ctx.fillStyle=col; ctx.beginPath(); ctx.arc(x+r*0.06,y,r*0.28,0,T2); ctx.fill();
+}
+function mCheese(ctx,x,y,r){
+  ctx.beginPath(); ctx.moveTo(x-r*0.6,y+r*0.42); ctx.lineTo(x+r*0.72,y+r*0.42); ctx.lineTo(x-r*0.6,y-r*0.42); ctx.closePath(); ctx.stroke();
+  ctx.beginPath(); ctx.arc(x-r*0.2,y+r*0.12,r*0.1,0,T2); ctx.stroke();
+  ctx.beginPath(); ctx.arc(x+r*0.08,y+r*0.26,r*0.08,0,T2); ctx.stroke();
+  ctx.beginPath(); ctx.arc(x-r*0.34,y-r*0.06,r*0.06,0,T2); ctx.stroke();
+}
+
+function roundRect(ctx,x,y,w,h,r){
+  ctx.beginPath();
+  ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r);
+  ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath();
+}
+function hexA(hex,a){
+  const c=hex.replace('#',''); const n=parseInt(c.length===3?c.split('').map(x=>x+x).join(''):c,16);
+  return `rgba(${(n>>16)&255},${(n>>8)&255},${n&255},${a})`;
+}
+function letterSpace(str,px){ return str.split('').join('\u200a'.repeat(Math.max(1,Math.round(px/2)))); }
+
+/* junta todos os links/redes num texto para o rodapé */
+function socialsText(){
+  return (CFG.socials||[]).map(s=>(s||'').trim()).filter(Boolean).join('   ·   ');
+}
+/* desenha as linhas editáveis dos links nas definições */
+function renderSocials(){
+  const box=document.getElementById('socialsList'); box.innerHTML='';
+  const list = (CFG.socials&&CFG.socials.length)?CFG.socials:[''];
+  list.forEach((val,i)=>{
+    const line=document.createElement('div'); line.className='item-line';
+    const inp=document.createElement('input');
+    inp.placeholder='Ex.: @atuacozinha · facebook.com/... · www.site.pt';
+    inp.value=val||'';
+    inp.addEventListener('input',readSocials);
+    const del=document.createElement('button'); del.className='icon-btn'; del.type='button'; del.textContent='✕';
+    del.onclick=()=>{ CFG.socials.splice(i,1); renderSocials(); };
+    line.append(inp,del); box.appendChild(line);
+  });
+}
+function readSocials(){
+  CFG.socials = Array.from(document.querySelectorAll('#socialsList input')).map(i=>i.value);
+}
+
+/* monta data a partir do menu diário/festa */
+function dailyData(date){
+  const m = DAILY[date] || {subtitle:'',cats:[]};
+  return {
+    kicker:'Menu do Dia',
+    title: formatDatePt(date),
+    subtitle: m.subtitle||'',
+    cats: m.cats||[]
+  };
+}
+function partyData(p){
+  if(!p) return {dateText:'', bigTitle:'', cats:[]};
+  let sub = '';
+  if(p.price) sub = (p.price.includes('€')?p.price:p.price+' € / pessoa');
+  const link = (p.date && p.id) ? buildReserveLink('festa', p.date, p.title||'Evento', 'party:'+p.id) : '';
+  return { dateText: p.date?formatDatePt(p.date):'', bigTitle:(p.title||'Festa'), title:p.title||'Festa', subtitle:sub, cats:p.cats||[], reserveLink: link, isParty:true,
+           bgId: p.bgId||'', bgVeil: (typeof p.bgVeil==='number')?p.bgVeil:0.78 };
+}
+
+function formatDatePt(d){
+  if(!d) return '';
+  const dias=['domingo','segunda','terça','quarta','quinta','sexta','sábado'];
+  const mes=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+  const dt=new Date(d+'T00:00');
+  return `${dias[dt.getDay()]}, ${dt.getDate()} ${mes[dt.getMonth()]}`.replace(/^\w/,c=>c.toUpperCase());
+}
+
+async function collectImgs(cats){
+  const map={};
+  for(const c of (cats||[])) for(const it of (c.items||[])){
+    if(it.photoId && !map[it.photoId]){ const img=await getPhotoImg(it.photoId); if(img) map[it.photoId]=img; }
+  }
+  return map;
+}
+function currentDailyData(){
+  const cats = readCats(document.getElementById('dailyCats'));
+  return {
+    dateText: formatDatePt(currentDailyDate),
+    title:formatDatePt(currentDailyDate),
+    subtitle:(document.getElementById('dailySubtitle').value||''),
+    cats,
+    reserveLink: buildReserveLink('diario', currentDailyDate, 'Menu de '+formatDatePt(currentDailyDate), 'daily:'+currentDailyDate)
+  };
+}
+async function refreshDailyPoster(){
+  await fontsReady();
+  const data = currentDailyData();
+  const imgs = await collectImgs(data.cats);
+  renderPoster(document.getElementById('poster'), data, posterFmt, imgs);
+}
+async function refreshPartyPoster(){
+  await fontsReady();
+  const p = readPartyForm();
+  const data = partyData(p);
+  const imgs = await collectImgs(data.cats);
+  if(data.bgId){ const bg=await getPhotoImg(data.bgId); if(bg) data.bgImg=bg; }
+  renderPoster(document.getElementById('posterParty'), data, posterFmtParty, imgs);
+}
+
+/* ============================================================
+   EDITOR DE SECÇÕES / ITENS
+   ============================================================ */
+function catBlockHtml(){
+  return `<div class="cat-block">
+    <div class="cat-head">
+      <input class="cat-name" placeholder="Nome da secção (ex.: Entradas)">
+      <div style="flex:1"></div>
+      <button class="icon-btn del-cat" title="Remover secção">🗑</button>
+    </div>
+    <div class="items"></div>
+    <button class="btn ghost sm add-item" style="margin-top:4px">+ Prato</button>
+  </div>`;
+}
+function itemLineHtml(){
+  return `<div class="item-line">
+    <canvas class="thumb" title="Tocar para adicionar foto do prato"></canvas>
+    <input class="name" placeholder="Nome do prato">
+    <input class="price" placeholder="Preço">
+    <button class="icon-btn add-photo" title="Adicionar / trocar foto">📷</button>
+    <button class="icon-btn rmphoto" title="Remover foto">⊘</button>
+    <button class="icon-btn dl-item" title="Descarregar imagem">⬇</button>
+    <button class="icon-btn del-item" title="Remover prato">✕</button>
+  </div>`;
+}
+function addCat(container, cat){
+  const wrap = document.createElement('div');
+  wrap.innerHTML = catBlockHtml();
+  const block = wrap.firstElementChild;
+  container.appendChild(block);
+  const itemsBox = block.querySelector('.items');
+  block.querySelector('.cat-name').value = cat?.name || '';
+  (cat?.items?.length ? cat.items : [{}]).forEach(it=>addItem(itemsBox, it));
+  block.querySelector('.add-item').onclick = ()=>{ addItem(itemsBox,{}); };
+  block.querySelector('.del-cat').onclick = ()=>{ block.remove(); livePreview(container); };
+  return block;
+}
+function addItem(box, it){
+  const wrap=document.createElement('div'); wrap.innerHTML=itemLineHtml();
+  const line=wrap.firstElementChild; box.appendChild(line);
+  const nameI=line.querySelector('.name'), priceI=line.querySelector('.price');
+  nameI.value = it?.name||'';
+  priceI.value = it?.price||'';
+  if(it?.photoId){ line.dataset.photoId=it.photoId; line.classList.add('has-photo'); }
+  const onEdit=()=>{ updateThumb(line); livePreview(box); };
+  nameI.addEventListener('input',onEdit);
+  priceI.addEventListener('input',onEdit);
+  line.querySelector('.thumb').onclick=()=>pickPhoto(line);
+  line.querySelector('.add-photo').onclick=()=>pickPhoto(line);
+  line.querySelector('.rmphoto').onclick=()=>removePhoto(line);
+  line.querySelector('.dl-item').onclick=()=>downloadDish(line);
+  line.querySelector('.del-item').onclick=()=>{ line.remove(); livePreview(box); };
+  updateThumb(line);
+}
+function lineItem(line){ return {name:line.querySelector('.name').value, price:line.querySelector('.price').value, photoId:line.dataset.photoId||''}; }
+
+/* ---- fotografias reais por prato ---- */
+const PHOTO_IMG={};
+async function getPhotoImg(ref){
+  if(!ref) return null;
+  if(PHOTO_IMG[ref]) return PHOTO_IMG[ref];
+  // ref pode ser "img:ID" (servidor) ou um pid antigo guardado localmente
+  let src;
+  if(ref.startsWith('img:')) src = resolveImageSrc(ref);
+  else { src = await load('photo:'+ref, null); if(!src) return null; }
+  const img=await new Promise(res=>{ const i=new Image(); i.crossOrigin='anonymous'; i.onload=()=>res(i); i.onerror=()=>res(null); i.src=src; });
+  if(img) PHOTO_IMG[ref]=img;
+  return img;
+}
+function compressImage(file, cb){
+  const r=new FileReader();
+  r.onload=()=>{ const img=new Image(); img.onload=()=>{
+    const max=820; let w=img.naturalWidth,h=img.naturalHeight;
+    const s=Math.min(1,max/Math.max(w,h)); w=Math.round(w*s); h=Math.round(h*s);
+    const c=document.createElement('canvas'); c.width=w; c.height=h;
+    c.getContext('2d').drawImage(img,0,0,w,h);
+    cb(c.toDataURL('image/jpeg',0.8));
+  }; img.onerror=()=>toast('Não foi possível ler a imagem'); img.src=r.result; };
+  r.readAsDataURL(file);
+}
+function compressBg(file, cb){
+  const r=new FileReader();
+  r.onload=()=>{ const img=new Image(); img.onload=()=>{
+    const max=1280; let w=img.naturalWidth,h=img.naturalHeight;
+    const s=Math.min(1,max/Math.max(w,h)); w=Math.round(w*s); h=Math.round(h*s);
+    const c=document.createElement('canvas'); c.width=w; c.height=h;
+    c.getContext('2d').drawImage(img,0,0,w,h);
+    cb(c.toDataURL('image/jpeg',0.82));
+  }; img.onerror=()=>toast('Não foi possível ler a imagem'); img.src=r.result; };
+  r.readAsDataURL(file);
+}
+function updateBgButton(){
+  const b=document.getElementById('partyBgBtn'); if(!b) return;
+  b.textContent = currentPartyBgId ? '🖼️ Trocar imagem de fundo' : '🖼️ Imagem de fundo';
+  const rm=document.getElementById('partyBgRemove'); if(rm) rm.style.display = currentPartyBgId ? 'inline-flex' : 'none';
+  const veilRow=document.getElementById('partyVeilRow'); if(veilRow) veilRow.style.display = currentPartyBgId ? 'flex' : 'none';
+}
+function pickPartyBg(){
+  const inp=document.createElement('input'); inp.type='file'; inp.accept='image/*';
+  inp.onchange=()=>{ const f=inp.files&&inp.files[0]; if(!f) return;
+    compressBg(f, async(dataURL)=>{
+      toast('A enviar imagem de fundo…');
+      const ref = await uploadImage(dataURL);      // "img:ID"
+      currentPartyBgId = ref;
+      const img=new Image(); img.crossOrigin='anonymous'; img.onload=()=>{ PHOTO_IMG[ref]=img; updateBgButton(); refreshPartyPoster(); }; img.src=resolveImageSrc(ref);
+      toast('Imagem de fundo adicionada ✓ — lembra-te de guardar');
+    });
+  };
+  inp.click();
+}
+function removePartyBg(){
+  if(currentPartyBgId) delete PHOTO_IMG[currentPartyBgId];
+  currentPartyBgId='';
+  updateBgButton(); refreshPartyPoster();
+  toast('Imagem de fundo removida');
+}
+function pickPhoto(line){
+  const inp=document.createElement('input'); inp.type='file'; inp.accept='image/*';
+  inp.onchange=()=>{ const f=inp.files&&inp.files[0]; if(!f) return;
+    compressImage(f, async(dataURL)=>{
+      toast('A enviar foto…');
+      const ref = await uploadImage(dataURL);      // "img:ID"
+      line.dataset.photoId=ref; line.classList.add('has-photo');
+      const img=new Image(); img.crossOrigin='anonymous'; img.onload=()=>{ PHOTO_IMG[ref]=img; updateThumb(line); livePreview(line.closest('.cat-block')||line); }; img.src=resolveImageSrc(ref);
+      toast('Foto adicionada ✓ — lembra-te de guardar o menu');
+    });
+  };
+  inp.click();
+}
+function removePhoto(line){
+  const pid=line.dataset.photoId;
+  if(!pid) return;
+  delete line.dataset.photoId; line.classList.remove('has-photo');
+  delete PHOTO_IMG[pid];
+  updateThumb(line);
+  toast('Foto removida — lembra-te de guardar o menu');
+}
+async function updateThumb(line){
+  const item=lineItem(line);
+  const img=item.photoId ? await getPhotoImg(item.photoId) : null;
+  renderDishCard(line.querySelector('.thumb'), item, 200, img);
+}
+function refreshThumbs(){ document.querySelectorAll('.item-line .thumb').forEach(t=>updateThumb(t.closest('.item-line'))); }
+async function downloadDish(line){
+  const item=lineItem(line);
+  const img=item.photoId ? await getPhotoImg(item.photoId) : null;
+  const c=document.createElement('canvas'); renderDishCard(c,item,1080,img);
+  const safe=(item.name||'prato').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')||'prato';
+  downloadCanvas(c,'prato-'+safe+'.png');
+}
+function downloadAllDishes(container){
+  const lines=[...container.querySelectorAll('.item-line')].filter(l=>l.querySelector('.name').value.trim());
+  if(!lines.length){ toast('Sem pratos para exportar'); return; }
+  lines.forEach((l,i)=>setTimeout(()=>downloadDish(l), i*500));
+  toast('A descarregar '+lines.length+' imagem(ns)…');
+}
+function readCats(container){
+  const cats=[];
+  container.querySelectorAll('.cat-block').forEach(cb=>{
+    const name=cb.querySelector('.cat-name').value;
+    const items=[];
+    cb.querySelectorAll('.item-line').forEach(il=>{
+      const nm=il.querySelector('.name').value, pr=il.querySelector('.price').value;
+      const pid=il.dataset.photoId||'';
+      if(nm.trim()||pr.trim()){ const o={name:nm,price:pr}; if(pid) o.photoId=pid; items.push(o); }
+    });
+    if(name.trim()||items.length) cats.push({name,items});
+  });
+  return cats;
+}
+function livePreview(node){
+  const inDaily = node.closest('#panel-diario');
+  const inParty = node.closest('#panel-festas');
+  if(inDaily) refreshDailyPoster();
+  if(inParty) refreshPartyPoster();
+}
+
+/* ============================================================
+   DAILY
+   ============================================================ */
+function renderDayTabs(){
+  const box=document.getElementById('dayTabs'); box.innerHTML='';
+  const dates = Object.keys(DAILY).sort().reverse();
+  if(!dates.includes(currentDailyDate)) dates.unshift(currentDailyDate);
+  dates.slice(0,8).forEach(d=>{
+    const b=document.createElement('button');
+    b.className='chip'+(d===currentDailyDate?' on':'');
+    b.textContent=formatDatePt(d);
+    b.onclick=()=>{ currentDailyDate=d; loadDailyForm(); };
+    box.appendChild(b);
+  });
+}
+function loadDailyForm(){
+  document.getElementById('dailyDate').value=currentDailyDate;
+  const m=DAILY[currentDailyDate]||{subtitle:'',cats:[]};
+  document.getElementById('dailySubtitle').value=m.subtitle||'';
+  const cont=document.getElementById('dailyCats'); cont.innerHTML='';
+  const cats = m.cats?.length ? m.cats : [{name:'Entradas',items:[{}]},{name:'Pratos principais',items:[{}]},{name:'Sobremesas',items:[{}]}];
+  cats.forEach(c=>addCat(cont,c));
+  renderDayTabs(); refreshDailyPoster();
+}
+async function saveDailyMenu(){
+  const cats=readCats(document.getElementById('dailyCats'));
+  DAILY[currentDailyDate]={subtitle:document.getElementById('dailySubtitle').value, cats};
+  await save('daily:'+currentDailyDate, DAILY[currentDailyDate]);
+  renderDayTabs(); toast('Menu do dia guardado ✓');
+}
+
+/* ============================================================
+   FESTAS
+   ============================================================ */
+function readPartyForm(){
+  const title = document.getElementById('partyTitle').value;
+  const date = document.getElementById('partyDate').value;
+  // gera um id assim que há título e data, para o link/QR de reserva aparecer já
+  if(!currentPartyId && title.trim() && date) currentPartyId = uid();
+  return {
+    id: currentPartyId,
+    title,
+    date,
+    price: document.getElementById('partyPrice').value,
+    cats: readCats(document.getElementById('partyCats')),
+    bgId: currentPartyBgId || '',
+    bgVeil: currentPartyVeil
+  };
+}
+function loadPartyForm(p){
+  currentPartyId = p?.id || null;
+  currentPartyBgId = p?.bgId || '';
+  currentPartyVeil = (typeof p?.bgVeil==='number') ? p.bgVeil : 0.78;
+  document.getElementById('partyTitle').value=p?.title||'';
+  document.getElementById('partyDate').value=p?.date||'';
+  document.getElementById('partyPrice').value=p?.price||'';
+  const veilEl=document.getElementById('partyVeil'); if(veilEl) veilEl.value=Math.round(currentPartyVeil*100);
+  updateBgButton();
+  const cont=document.getElementById('partyCats'); cont.innerHTML='';
+  const cats=p?.cats?.length?p.cats:[{name:'Entradas',items:[{}]},{name:'Prato principal',items:[{}]},{name:'Sobremesa',items:[{}]}];
+  cats.forEach(c=>addCat(cont,c));
+  refreshPartyPoster();
+}
+async function saveParty(){
+  const p=readPartyForm();
+  if(!p.title.trim()){ toast('Dá um título à festa primeiro'); return; }
+  if(p.id){ const i=PARTIES.findIndex(x=>x.id===p.id); if(i>=0) PARTIES[i]=p; }
+  else { p.id=uid(); currentPartyId=p.id; PARTIES.push(p); }
+  await save('party:'+p.id, p);
+  renderPartyList(); toast('Menu de festa guardado ✓');
+}
+function renderPartyList(){
+  const box=document.getElementById('partyList'); box.innerHTML='';
+  if(!PARTIES.length){ box.innerHTML='<div class="empty"><span class="big">🎉</span>Ainda não há menus de festa.</div>'; return; }
+  PARTIES.slice().reverse().forEach(p=>{
+    const el=document.createElement('div'); el.className='party-item';
+    el.innerHTML=`<div class="grow"><div class="who">${esc(p.title)}</div>
+      <div class="meta">${p.date?formatDatePt(p.date):'sem data'} ${p.price?'· '+esc(p.price):''} · ${countItems(p)} pratos</div></div>`;
+    const edit=mkBtn('Editar','btn ghost sm',()=>{ loadPartyForm(p); window.scrollTo({top:0,behavior:'smooth'}); });
+    const del=mkBtn('🗑','icon-btn',async()=>{ if(confirm('Apagar este menu de festa?')){ PARTIES=PARTIES.filter(x=>x.id!==p.id); await removeKey('party:'+p.id); renderPartyList(); }});
+    el.append(edit,del); box.appendChild(el);
+  });
+}
+function countItems(p){ return (p.cats||[]).reduce((n,c)=>n+(c.items||[]).filter(i=>i.name&&i.name.trim()).length,0); }
+
+/* ============================================================
+   RESERVAS
+   ============================================================ */
+let resFilter='all';
+async function addReservation(){
+  const r={
+    id:uid(),
+    name:document.getElementById('rName').value.trim(),
+    phone:document.getElementById('rPhone').value.trim(),
+    date:document.getElementById('rDate').value,
+    time:document.getElementById('rTime').value,
+    people:document.getElementById('rPeople').value,
+    type:document.getElementById('rType').value,
+    notes:document.getElementById('rNotes').value.trim(),
+    status:'pend'
+  };
+  if(!r.name||!r.date){ toast('Indica pelo menos nome e data'); return; }
+  RES.push(r); await save('res:'+r.id, r);
+  ['rName','rPhone','rDate','rTime','rNotes'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('rPeople').value=2;
+  renderRes(); toast('Reserva adicionada ✓');
+}
+function renderRes(){
+  const box=document.getElementById('resList'); box.innerHTML='';
+  let list=RES.slice().sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
+  if(resFilter!=='all') list=list.filter(r=>r.type===resFilter);
+  if(!list.length){ box.innerHTML='<div class="empty"><span class="big">📅</span>Sem reservas.</div>'; return; }
+  list.forEach(r=>{
+    const el=document.createElement('div'); el.className='res-item';
+    el.innerHTML=`<div class="grow">
+      <div class="who">${esc(r.name)} <span class="badge ${r.type}">${r.type==='festa'?'Festa':'Diário'}</span>
+        <span class="badge ${r.status==='ok'?'ok':'pend'}">${r.status==='ok'?'Confirmada':'Pendente'}</span></div>
+      <div class="meta">${formatDatePt(r.date)}${r.time?' · '+r.time:''} · ${r.people} pessoa(s)${r.phone?' · '+esc(r.phone):''}</div>
+      ${r.notes?`<div class="meta">📝 ${esc(r.notes)}</div>`:''}
+    </div>`;
+    const tog=mkBtn(r.status==='ok'?'↩':'✓','btn ghost sm',async()=>{ r.status=r.status==='ok'?'pend':'ok'; await save('res:'+r.id, r); renderRes(); });
+    const del=mkBtn('🗑','icon-btn',async()=>{ if(confirm('Apagar reserva?')){ RES=RES.filter(x=>x.id!==r.id); await removeKey('res:'+r.id); renderRes(); }});
+    el.append(tog,del); box.appendChild(el);
+  });
+}
+
+/* ============================================================
+   DOWNLOAD / PRINT
+   ============================================================ */
+const IS_IOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform==='MacIntel' && navigator.maxTouchPoints>1);
+function downloadCanvas(canvas,name){
+  canvas.toBlob(blob=>{
+    if(!blob){ // fallback
+      const a=document.createElement('a'); a.download=name; a.href=canvas.toDataURL('image/png'); a.click(); return;
+    }
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a'); a.href=url; a.download=name;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),5000);
+    if(IS_IOS) toast('Se a imagem abrir, mantém premido e escolhe "Guardar nas Fotos"');
+  },'image/png');
+}
+function printCanvas(canvas){
+  const area=document.getElementById('print-area');
+  area.innerHTML=`<img src="${canvas.toDataURL('image/png')}">`;
+  window.print();
+}
+
+/* ============================================================
+   HELPERS UI
+   ============================================================ */
+function esc(s){ return (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function mkBtn(txt,cls,fn){ const b=document.createElement('button'); b.className=cls; b.textContent=txt; b.style.marginLeft='6px'; b.onclick=fn; return b; }
+let toastTimer;
+function toast(msg, dur){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove('show'), dur||2200); }
+
+/* deteta automaticamente se está num PC ou telemóvel/tablet */
+function detectDevice(){
+  const coarse = window.matchMedia('(pointer:coarse)').matches;
+  const narrow = window.matchMedia('(max-width:880px)').matches;
+  const uaMobile = /Mobi|Android|iPhone|iPad|iPod|Tablet/i.test(navigator.userAgent) || IS_IOS;
+  const isMobile = narrow || (coarse && uaMobile);
+  document.body.classList.toggle('is-mobile', isMobile);
+  document.body.classList.toggle('is-desktop', !isMobile);
+  const pill=document.getElementById('devicePill');
+  if(pill) pill.textContent = isMobile ? '📱 Telemóvel' : '💻 PC';
+  return isMobile;
+}
+
+function buildSwatches(target, onPick, current){
+  const box=document.getElementById(target); if(!box) return; box.innerHTML='';
+  THEMES.forEach((t,i)=>{
+    const s=document.createElement('div'); s.className='swatch'+(i===current?' on':'');
+    s.style.background=t.accent; s.title=t.name;
+    s.onclick=()=>onPick(i);
+    box.appendChild(s);
+  });
+}
+
+/* ============================================================
+   INIT + EVENTOS
+   ============================================================ */
+/* reconstrói DAILY/PARTIES/RES a partir da cache local (chaves granulares) */
+async function loadStateFromLocal(){
+  CFG = await load('config', CFG);
+  if(!Array.isArray(CFG.socials)) CFG.socials = CFG.social ? [CFG.social] : [];
+  delete CFG.social;
+  DAILY={}; PARTIES=[]; RES=[];
+  try{
+    const keys = await localList();
+    for(const k of keys){
+      if(k.startsWith('daily:')){ const v=await localGet(k,null); if(v) DAILY[k.slice(6)]=v; }
+      else if(k.startsWith('party:')){ const v=await localGet(k,null); if(v) PARTIES.push(v); }
+      else if(k.startsWith('res:')){ const v=await localGet(k,null); if(v) RES.push(v); }
+    }
+  }catch(e){ console.warn('list local falhou',e); }
+  // migração de blocos antigos (versões anteriores da app)
+  const oldD=await load('daily_menus',null); if(oldD){ for(const d in oldD){ if(!DAILY[d]){ DAILY[d]=oldD[d]; await save('daily:'+d, oldD[d]); } } }
+  const oldP=await load('party_menus',null); if(oldP){ oldP.forEach(async p=>{ if(!PARTIES.find(x=>x.id===p.id)){ PARTIES.push(p); await save('party:'+p.id,p);} }); }
+  const oldR=await load('reservations',null); if(oldR){ oldR.forEach(async r=>{ if(!RES.find(x=>x.id===r.id)){ RES.push(r); await save('res:'+r.id,r);} }); }
+  if(PARTIES.length) currentPartyId=PARTIES[PARTIES.length-1].id;
+}
+
+/* re-desenha toda a UI a partir do estado atual (após sincronizar) */
+function reloadUIFromState(){
+  applyTheme();
+  loadDailyForm();
+  loadPartyForm(PARTIES[PARTIES.length-1]||null);
+  renderPartyList();
+  renderRes();
+  // re-preencher campos de definições
+  const set=(id,v)=>{ const e=document.getElementById(id); if(e) e.value=v||''; };
+  set('cfgName',CFG.name); set('cfgSub',CFG.sub); set('cfgPhone',CFG.phone);
+  set('cfgAddr',CFG.addr); set('cfgInitial',CFG.initial||'C');
+  renderSocials(); loadLogo(); updateLogoPreview();
+  refreshDailyPoster(); refreshPartyPoster();
+}
+
+async function init(){
+  await loadStateFromLocal();
+
+  applyTheme();
+  detectDevice();
+  let rzT; 
+  window.addEventListener('resize', ()=>{ clearTimeout(rzT); rzT=setTimeout(detectDevice,180); });
+  window.addEventListener('orientationchange', ()=>setTimeout(detectDevice,200));
+
+  // tabs
+  document.querySelectorAll('#tabs button').forEach(b=>{
+    b.onclick=()=>{
+      document.querySelectorAll('#tabs button').forEach(x=>x.classList.remove('active'));
+      document.querySelectorAll('.panel').forEach(x=>x.classList.remove('active'));
+      b.classList.add('active');
+      document.getElementById('panel-'+b.dataset.tab).classList.add('active');
+      if(b.dataset.tab==='festas') refreshPartyPoster();
+    };
+  });
+
+  // formato segmentos
+  document.querySelectorAll('#fmtSeg button').forEach(b=>b.onclick=()=>{
+    document.querySelectorAll('#fmtSeg button').forEach(x=>x.classList.remove('on')); b.classList.add('on');
+    posterFmt=b.dataset.fmt; refreshDailyPoster();
+  });
+  document.querySelectorAll('#fmtSegP button').forEach(b=>b.onclick=()=>{
+    document.querySelectorAll('#fmtSegP button').forEach(x=>x.classList.remove('on')); b.classList.add('on');
+    posterFmtParty=b.dataset.fmt; refreshPartyPoster();
+  });
+
+  // swatches no cartaz (muda tema rapidamente) — sincronizados nos 3 sítios
+  function pickTheme(i){
+    CFG.themeIndex=i; applyTheme(); save('config',CFG);
+    refreshDailyPoster(); refreshPartyPoster(); refreshThumbs();
+    refreshAllSwatches();
+  }
+  window.refreshAllSwatches = function(){
+    buildSwatches('swatches', pickTheme, CFG.themeIndex);
+    buildSwatches('swatchesP', pickTheme, CFG.themeIndex);
+    if(document.getElementById('cfgSwatches')) buildSwatches('cfgSwatches', pickTheme, CFG.themeIndex);
+  };
+  refreshAllSwatches();
+
+  // imagem de fundo da festa
+  document.getElementById('partyBgBtn').onclick=pickPartyBg;
+  document.getElementById('partyBgRemove').onclick=removePartyBg;
+  document.getElementById('partyVeil').addEventListener('input',e=>{
+    currentPartyVeil = (+e.target.value)/100; refreshPartyPoster();
+  });
+
+  // daily
+  document.getElementById('dailyDate').onchange=e=>{ currentDailyDate=e.target.value; loadDailyForm(); };
+  document.getElementById('dailySubtitle').addEventListener('input',refreshDailyPoster);
+  document.getElementById('addCatDaily').onclick=()=>addCat(document.getElementById('dailyCats'),{name:'',items:[{}]});
+  document.getElementById('dlDishesDaily').onclick=()=>downloadAllDishes(document.getElementById('dailyCats'));
+  document.getElementById('saveDaily').onclick=saveDailyMenu;
+  document.getElementById('dlDaily').onclick=()=>{ const c=document.getElementById('poster'); downloadCanvas(c,'menu-'+currentDailyDate+'.png'); };
+  document.getElementById('printDaily').onclick=()=>printCanvas(document.getElementById('poster'));
+  document.getElementById('copyLinkDaily').onclick=async()=>{
+    const link=buildReserveLink('diario', currentDailyDate, 'Menu de '+formatDatePt(currentDailyDate), 'daily:'+currentDailyDate);
+    try{ await navigator.clipboard.writeText(link); toast('Link de reserva copiado ✓'); }
+    catch(e){ prompt('Copia este link:', link); }
+  };
+  loadDailyForm();
+
+  // festas
+  document.getElementById('partyTitle').addEventListener('input',refreshPartyPoster);
+  document.getElementById('partyDate').addEventListener('input',refreshPartyPoster);
+  document.getElementById('partyPrice').addEventListener('input',refreshPartyPoster);
+  document.getElementById('addCatParty').onclick=()=>addCat(document.getElementById('partyCats'),{name:'',items:[{}]});
+  document.getElementById('dlDishesParty').onclick=()=>downloadAllDishes(document.getElementById('partyCats'));
+  document.getElementById('saveParty').onclick=saveParty;
+  document.getElementById('dlParty').onclick=()=>{ const c=document.getElementById('posterParty'); downloadCanvas(c,'festa.png'); };
+  document.getElementById('printParty').onclick=()=>printCanvas(document.getElementById('posterParty'));
+  document.getElementById('copyLinkParty').onclick=async()=>{
+    const p=readPartyForm();
+    if(!p.title.trim() || !p.date){ toast('Põe título e data na festa primeiro'); return; }
+    const saved = PARTIES.some(x=>x.id===p.id);
+    if(!saved){ toast('Guarda o menu de festa primeiro, para o link funcionar'); return; }
+    const link=buildReserveLink('festa', p.date, p.title||'Evento', 'party:'+p.id);
+    try{ await navigator.clipboard.writeText(link); toast('Link de reserva copiado ✓'); }
+    catch(e){ prompt('Copia este link:', link); }
+  };
+  loadPartyForm(PARTIES[PARTIES.length-1]||null);
+  renderPartyList();
+
+  // reservas
+  document.getElementById('addRes').onclick=addReservation;
+  document.querySelectorAll('#resFilter button').forEach(b=>b.onclick=()=>{
+    document.querySelectorAll('#resFilter button').forEach(x=>x.classList.remove('on')); b.classList.add('on');
+    resFilter=b.dataset.f; renderRes();
+  });
+  document.getElementById('rDate').value=todayStr();
+  renderRes();
+
+  // config
+  document.getElementById('cfgName').value=CFG.name||'';
+  document.getElementById('cfgSub').value=CFG.sub||'';
+  document.getElementById('cfgPhone').value=CFG.phone||'';
+  document.getElementById('cfgAddr').value=CFG.addr||'';
+  document.getElementById('cfgInitial').value=CFG.initial||'C';
+  renderSocials();
+  loadLogo(); updateLogoPreview();
+  document.getElementById('cfgInitial').addEventListener('input',e=>{ CFG.initial=e.target.value||'C'; updateHeaderLogo(); updateLogoPreview(); });
+  document.getElementById('uploadLogo').onclick=()=>{
+    const inp=document.createElement('input'); inp.type='file'; inp.accept='image/*';
+    inp.onchange=()=>{ const f=inp.files&&inp.files[0]; if(!f) return;
+      processLogo(f, async(dataURL)=>{
+        toast('A enviar logótipo…');
+        CFG.logo = await uploadImage(dataURL);   // guarda no servidor, fica "img:ID"
+        await save('config',CFG);
+        loadLogo(); updateHeaderLogo(); updateLogoPreview();
+        refreshDailyPoster(); refreshPartyPoster();
+        toast('Logótipo atualizado ✓');
+      });
+    };
+    inp.click();
+  };
+  document.getElementById('removeLogo').onclick=async()=>{
+    CFG.logo=''; LOGO_IMG=null; await save('config',CFG);
+    updateHeaderLogo(); updateLogoPreview(); refreshDailyPoster(); refreshPartyPoster();
+    toast('Logótipo removido');
+  };
+  document.getElementById('addSocial').onclick=()=>{ readSocials(); CFG.socials.push(''); renderSocials(); };
+  document.getElementById('saveCfg').onclick=async()=>{
+    CFG.name=document.getElementById('cfgName').value;
+    CFG.sub=document.getElementById('cfgSub').value;
+    CFG.phone=document.getElementById('cfgPhone').value;
+    CFG.addr=document.getElementById('cfgAddr').value;
+    readSocials();
+    CFG.socials=CFG.socials.map(s=>s.trim()).filter(Boolean);
+    CFG.initial=document.getElementById('cfgInitial').value||'C';
+    await save('config',CFG); applyTheme(); renderSocials(); updateLogoPreview(); refreshDailyPoster(); refreshPartyPoster(); refreshThumbs();
+    toast('Definições guardadas ✓');
+  };
+
+  // re-render quando as fontes carregarem
+  fontsReady().then(()=>{ refreshDailyPoster(); refreshPartyPoster(); refreshThumbs(); });
+  // re-render quando a biblioteca de QR estiver disponível
+  ensureQR(()=>{ refreshDailyPoster(); refreshPartyPoster(); });
+
+  // ligação Airtable — o token NUNCA está no ficheiro (seria público no GitHub).
+  // É guardado só no navegador (localStorage). Se não houver, a app pede-o uma vez.
+  let savedToken = '';
+  try{ savedToken = localStorage.getItem('at_token') || ''; }catch(e){}
+  if(!savedToken && AIRTABLE_TOKEN && AIRTABLE_TOKEN!=='COLA_AQUI_O_TEU_TOKEN'){
+    savedToken = AIRTABLE_TOKEN; // retrocompatibilidade, caso esteja embutido
+  }
+  if(!savedToken){
+    savedToken = (prompt('Cola aqui o teu token do Airtable (fica guardado só neste aparelho):')||'').trim();
+    if(savedToken){ try{ localStorage.setItem('at_token', savedToken); }catch(e){} }
+  }
+  if(savedToken){
+    const ok = await connectAirtable(savedToken, true);
+    if(ok){
+      try{ localStorage.setItem('at_token', savedToken); }catch(e){}
+      reloadUIFromState();
+      // re-sincroniza a cada 30s: reservas novas (feitas no formulário) aparecem sozinhas
+      setInterval(async ()=>{
+        if(!AT_ONLINE) return;
+        try{
+          const data = await atPullAll();
+          await applyDataset(data);
+          renderRes();
+        }catch(e){ /* falha silenciosa; tenta de novo no próximo ciclo */ }
+      }, 30000);
+    }
+  } else {
+    setSyncState('off');
+  }
+}
+init();
+</script>
+</body>
+</html>

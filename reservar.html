@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reservar mesa</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,900;1,9..144,500&family=Hanken+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#f4ede0; --ink:#2b2118; --ink-soft:#6b5d4c;
+    --accent:#b5482f; --accent-deep:#8f3522; --olive:#5d6340;
+    --line:#d8cbb3; --white:#fbf7ef; --shadow:rgba(43,33,24,.14);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    font-family:"Hanken Grotesk",sans-serif;color:var(--ink);min-height:100vh;
+    background:
+      radial-gradient(1000px 500px at 85% -10%, rgba(181,72,47,.12), transparent 60%),
+      radial-gradient(800px 400px at -10% 110%, rgba(93,99,64,.14), transparent 55%),
+      var(--paper);
+    display:flex;align-items:flex-start;justify-content:center;padding:24px 16px 60px;
+  }
+  h1,h2,.serif{font-family:"Fraunces",serif}
+  .card{
+    width:100%;max-width:460px;background:var(--white);border:1px solid var(--line);
+    border-radius:18px;box-shadow:0 18px 44px var(--shadow);padding:26px 24px;
+  }
+  .logo{width:64px;height:64px;border-radius:17px;display:grid;place-items:center;overflow:hidden;
+    background:linear-gradient(150deg,var(--accent),var(--accent-deep));color:var(--white);
+    font-family:"Fraunces";font-weight:900;font-size:30px;margin:0 auto 14px}
+  .logo img{width:100%;height:100%;object-fit:contain}
+  .rest-name{text-align:center;font-family:"Fraunces";font-weight:900;font-size:23px;letter-spacing:-.4px}
+  .rest-sub{text-align:center;color:var(--ink-soft);font-size:13px;margin-top:3px}
+  .event-box{
+    margin:18px 0 6px;padding:14px 16px;border-radius:13px;text-align:center;
+    background:rgba(181,72,47,.10);border:1px solid rgba(181,72,47,.25);
+  }
+  .event-box .kick{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--accent);font-weight:700}
+  .event-box .ttl{font-family:"Fraunces";font-style:italic;font-weight:600;font-size:20px;margin-top:4px}
+  .event-box .dt{color:var(--ink-soft);font-size:14px;margin-top:4px;font-weight:600}
+  label{display:block;margin-top:14px}
+  label span{display:block;font-size:12.5px;font-weight:600;color:var(--ink-soft);margin-bottom:5px}
+  input,textarea{
+    width:100%;border:1px solid var(--line);background:var(--paper);border-radius:11px;
+    padding:13px;color:var(--ink);outline:none;font-family:inherit;font-size:16px;transition:.15s;
+  }
+  input:focus,textarea:focus{border-color:var(--accent);background:var(--white);box-shadow:0 0 0 3px rgba(181,72,47,.12)}
+  textarea{resize:vertical;min-height:64px}
+  .row{display:flex;gap:12px}
+  .row>*{flex:1}
+  .btn{
+    width:100%;margin-top:20px;border:0;border-radius:13px;padding:15px;font-weight:700;font-size:16px;
+    background:linear-gradient(150deg,var(--accent),var(--accent-deep));color:var(--white);cursor:pointer;transition:.18s;
+  }
+  .btn:hover{transform:translateY(-1px);box-shadow:0 10px 22px var(--shadow)}
+  .btn:disabled{opacity:.6;cursor:default;transform:none}
+  .msg{margin-top:16px;padding:13px 15px;border-radius:11px;font-size:14px;line-height:1.5;display:none}
+  .msg.ok{display:block;background:#d8ecd2;color:#2f5a26;border:1px solid #b6d8ab}
+  .msg.err{display:block;background:#f6ddd6;color:#8f3522;border:1px solid #e6b6a8}
+  .done{text-align:center;display:none}
+  .done .big{font-size:52px}
+  .done h2{font-size:22px;margin:10px 0 6px}
+  .done p{color:var(--ink-soft);font-size:15px;line-height:1.5}
+  .foot{text-align:center;color:var(--ink-soft);font-size:12px;margin-top:20px}
+  .see-menu{
+    width:100%;margin-top:12px;border:1px solid var(--accent);border-radius:13px;padding:13px;
+    font-weight:700;font-size:15px;background:transparent;color:var(--accent);cursor:pointer;transition:.15s;
+  }
+  .see-menu:hover{background:rgba(181,72,47,.08)}
+  .modal-bg{position:fixed;inset:0;background:rgba(43,33,24,.55);display:none;align-items:center;justify-content:center;padding:20px;z-index:50}
+  .modal-bg.show{display:flex}
+  .modal{background:var(--white);border-radius:18px;max-width:420px;width:100%;max-height:82vh;overflow:auto;padding:24px;box-shadow:0 24px 60px rgba(0,0,0,.3)}
+  .modal h3{font-family:"Fraunces";font-size:21px;margin-bottom:4px}
+  .modal .mdate{color:var(--ink-soft);font-size:13px;margin-bottom:16px}
+  .modal .cat{font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);margin:14px 0 8px}
+  .modal .dish{display:flex;justify-content:space-between;gap:12px;padding:7px 0;border-bottom:1px dashed var(--line)}
+  .modal .dish .nm{font-weight:500}
+  .modal .dish .pr{color:var(--accent);font-weight:700;white-space:nowrap}
+  .modal .close{width:100%;margin-top:18px;border:0;border-radius:11px;padding:13px;font-weight:700;background:var(--ink);color:var(--white);cursor:pointer}
+</style>
+</head>
+<body>
+<div class="card">
+  <div id="form-view">
+    <div class="logo" id="logo">C</div>
+    <div class="rest-name" id="restName">Restaurante</div>
+    <div class="rest-sub" id="restSub"></div>
+
+    <div class="event-box">
+      <div class="kick" id="evKick">Reserva</div>
+      <div class="ttl" id="evTitle">—</div>
+      <div class="dt" id="evDate"></div>
+    </div>
+
+    <button class="see-menu" id="seeMenu" style="display:none">🍽️ Ver menu</button>
+
+    <label><span>Nome *</span><input id="name" autocomplete="name" placeholder="O seu nome"></label>
+    <label><span>Telefone</span><input id="phone" inputmode="tel" autocomplete="tel" placeholder="9XX XXX XXX"></label>
+    <label><span>Número de pessoas *</span><input id="people" type="number" min="1" value="2"></label>
+    <label><span>Notas (alergias, pedidos especiais…)</span><textarea id="notes" placeholder="Opcional"></textarea></label>
+
+    <button class="btn" id="send">Confirmar reserva</button>
+    <div class="msg err" id="err"></div>
+    <div class="foot" id="foot"></div>
+  </div>
+
+  <div class="done" id="done-view">
+    <div class="big">✅</div>
+    <h2>Reserva confirmada!</h2>
+    <p id="doneText">Obrigado. A sua reserva ficou registada.</p>
+  </div>
+</div>
+
+<div class="modal-bg" id="menuModal">
+  <div class="modal">
+    <h3 id="mTitle">Menu</h3>
+    <div class="mdate" id="mDate"></div>
+    <div id="mBody"></div>
+    <button class="close" id="mClose">Fechar</button>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   CONFIG — endpoint da função do servidor.
+   No Cloudflare Pages fica em /api/reservar (não mexer).
+   ============================================================ */
+const ENDPOINT = '/api/reservar';
+
+/* lê parâmetros: link curto ?k=CHAVE  (ou antigo ?key=...&t=...&d=...) */
+const P = new URLSearchParams(location.search);
+const sourceKey = P.get('k') || P.get('key') || '';
+// tipo derivado da chave: "party:..." = festa, "daily:..." = diário
+const evType = sourceKey.startsWith('party:') ? 'festa' : 'diario';
+// data derivada da chave do diário (daily:YYYY-MM-DD), se existir
+let evDateRaw = P.get('d') || (sourceKey.startsWith('daily:') ? sourceKey.slice(6) : '');
+let evTitle = P.get('t') || (evType==='festa' ? 'Evento' : 'Menu do dia');
+let restName = P.get('name') || 'Restaurante';
+let restSub = P.get('sub') || '';
+const logoURL = P.get('logo') || '';
+
+function formatDatePt(d){
+  if(!d) return '';
+  const dias=['domingo','segunda','terça','quarta','quinta','sexta','sábado'];
+  const mes=['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+  const dt=new Date(d+'T00:00');
+  if(isNaN(dt)) return d;
+  return `${dias[dt.getDay()]}, ${dt.getDate()} de ${mes[dt.getMonth()]}`.replace(/^\w/,c=>c.toUpperCase());
+}
+
+document.getElementById('restName').textContent = restName;
+document.getElementById('restSub').textContent = restSub;
+document.getElementById('evTitle').textContent = evTitle;
+document.getElementById('evKick').textContent = evType==='festa' ? 'Reserva para o evento' : 'Reserva — Menu do dia';
+document.getElementById('evDate').textContent = formatDatePt(evDateRaw);
+document.getElementById('foot').textContent = restName;
+if(logoURL){
+  const l=document.getElementById('logo'); l.innerHTML=`<img src="${logoURL}" alt="logo">`; l.style.background='transparent';
+} else {
+  document.getElementById('logo').textContent = (restName[0]||'C').toUpperCase();
+}
+
+/* ---- buscar config (logótipo) e o menu ao servidor ---- */
+let MENU_DATA = null;
+(async ()=>{
+  if(!sourceKey) return;
+  try{
+    const r = await fetch('/api/menu?key='+encodeURIComponent(sourceKey));
+    if(!r.ok){
+      const t = await r.text().catch(()=> '');
+      console.error('menu.js falhou:', r.status, t);
+      if(r.status===500) document.getElementById('foot').textContent='(servidor sem token — configurar AIRTABLE_TOKEN no Netlify)';
+      return;
+    }
+    const d = await r.json();
+    if(d.config){
+      if(d.config.name){ document.getElementById('restName').textContent=d.config.name; document.getElementById('foot').textContent=d.config.name; }
+      if(d.config.sub) document.getElementById('restSub').textContent=d.config.sub;
+      if(d.config.logo){
+        const l=document.getElementById('logo'); l.innerHTML=`<img src="${d.config.logo}" alt="logo">`; l.style.background='transparent';
+      } else if(d.config.initial){
+        document.getElementById('logo').textContent=(d.config.initial||'C').toUpperCase();
+      }
+    }
+    if(d.menu){
+      MENU_DATA = d.menu;
+      document.getElementById('seeMenu').style.display='block';
+      if(evType==='festa' && d.menu.title){ evTitle=d.menu.title; document.getElementById('evTitle').textContent=d.menu.title; }
+      if(d.menu.date){ evDateRaw=d.menu.date; document.getElementById('evDate').textContent=formatDatePt(d.menu.date); }
+    }
+  }catch(e){ console.error('Sem ligação ao menu:', e); }
+})();
+
+/* ---- modal "Ver menu" ---- */
+function escH(s){ return (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+document.getElementById('seeMenu').onclick = ()=>{
+  if(!MENU_DATA) return;
+  document.getElementById('mTitle').textContent = evType==='festa' ? (MENU_DATA.title||evTitle) : 'Menu do dia';
+  document.getElementById('mDate').textContent = formatDatePt(evDateRaw) + (MENU_DATA.price? '  ·  '+MENU_DATA.price : '');
+  const body = document.getElementById('mBody'); body.innerHTML='';
+  (MENU_DATA.cats||[]).forEach(c=>{
+    const items=(c.items||[]).filter(it=>it.name&&it.name.trim());
+    if(!items.length) return;
+    if(c.name){ const h=document.createElement('div'); h.className='cat'; h.textContent=c.name; body.appendChild(h); }
+    items.forEach(it=>{
+      const row=document.createElement('div'); row.className='dish';
+      const nm=document.createElement('span'); nm.className='nm'; nm.textContent=it.name.trim();
+      row.appendChild(nm);
+      if(it.price&&it.price.trim()){ const pr=document.createElement('span'); pr.className='pr'; let p=it.price.trim(); if(/^\d/.test(p)&&!p.includes('€'))p+=' €'; pr.textContent=p; row.appendChild(pr); }
+      body.appendChild(row);
+    });
+  });
+  document.getElementById('menuModal').classList.add('show');
+};
+document.getElementById('mClose').onclick = ()=>document.getElementById('menuModal').classList.remove('show');
+document.getElementById('menuModal').onclick = (e)=>{ if(e.target.id==='menuModal') document.getElementById('menuModal').classList.remove('show'); };
+
+const errBox = document.getElementById('err');
+function showErr(m){ errBox.textContent=m; errBox.classList.add('err'); errBox.style.display='block'; }
+
+document.getElementById('send').onclick = async () => {
+  errBox.style.display='none';
+  const name = document.getElementById('name').value.trim();
+  const phone = document.getElementById('phone').value.trim();
+  const people = parseInt(document.getElementById('people').value,10) || 0;
+  const notes = document.getElementById('notes').value.trim();
+
+  if(!name){ showErr('Por favor indique o seu nome.'); return; }
+  if(people < 1){ showErr('Indique o número de pessoas.'); return; }
+  if(!evDateRaw){ showErr('Este link de reserva está incompleto. Peça um novo ao restaurante.'); return; }
+
+  const btn = document.getElementById('send');
+  btn.disabled = true; btn.textContent = 'A enviar…';
+
+  try{
+    const res = await fetch(ENDPOINT, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        name, phone, people, notes,
+        date: evDateRaw, type: evType,
+        eventLabel: evTitle, sourceKey
+      })
+    });
+    const out = await res.json().catch(()=>({}));
+    if(res.ok && out.ok){
+      document.getElementById('form-view').style.display='none';
+      const dv=document.getElementById('done-view'); dv.style.display='block';
+      document.getElementById('doneText').textContent =
+        `Obrigado, ${name}! A sua reserva para ${people} pessoa(s) — ${evTitle}, ${formatDatePt(evDateRaw)} — ficou registada.`;
+    } else {
+      showErr(out.error || 'Não foi possível registar a reserva. Tente novamente.');
+      btn.disabled=false; btn.textContent='Confirmar reserva';
+    }
+  }catch(e){
+    showErr('Sem ligação. Verifique a internet e tente de novo.');
+    btn.disabled=false; btn.textContent='Confirmar reserva';
+  }
+};
+</script>
+</body>
+</html>
