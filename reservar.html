@@ -96,12 +96,16 @@
 
     <button class="see-menu" id="seeMenu" style="display:none">🍽️ Ver menu</button>
 
+    <div id="closedBox" class="msg err" style="display:none"></div>
+
+    <div id="formFields">
     <label><span>Nome *</span><input id="name" autocomplete="name" placeholder="O seu nome"></label>
     <label><span>Telefone</span><input id="phone" inputmode="tel" autocomplete="tel" placeholder="9XX XXX XXX"></label>
     <label><span>Número de pessoas *</span><input id="people" type="number" min="1" value="2"></label>
     <label><span>Notas (alergias, pedidos especiais…)</span><textarea id="notes" placeholder="Opcional"></textarea></label>
 
     <button class="btn" id="send">Confirmar reserva</button>
+    </div>
     <div class="msg err" id="err"></div>
     <div class="foot" id="foot"></div>
   </div>
@@ -150,6 +154,45 @@ function formatDatePt(d){
   return `${dias[dt.getDay()]}, ${dt.getDate()} de ${mes[dt.getMonth()]}`.replace(/^\w/,c=>c.toUpperCase());
 }
 
+/* ---- prazos de reserva (hora de Lisboa) ---- */
+let REST_PHONE = '';
+let DAILY_SERVICE_TIME = '12:00';
+let DAILY_CLOSE_HOURS = 3;
+function pad2(n){ return String(n).padStart(2,'0'); }
+function nowLisbonStr(){
+  try{
+    const p=new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Lisbon',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false}).formatToParts(new Date());
+    const g=t=>p.find(x=>x.type===t).value;
+    return `${g('year')}-${g('month')}-${g('day')} ${g('hour')}:${g('minute')}`;
+  }catch(e){
+    const d=new Date(); return `${d.getUTCFullYear()}-${pad2(d.getUTCMonth()+1)}-${pad2(d.getUTCDate())} ${pad2(d.getUTCHours())}:${pad2(d.getUTCMinutes())}`;
+  }
+}
+function dailyDeadlineStr(dateStr, serviceTime, closeHours){
+  const [hh,mm]=String(serviceTime||'12:00').split(':').map(n=>parseInt(n,10)||0);
+  const [y,m,d]=dateStr.split('-').map(n=>parseInt(n,10));
+  const ms=Date.UTC(y,(m||1)-1,d||1,hh,mm)-(Number(closeHours)||0)*3600000;
+  const t=new Date(ms);
+  return `${t.getUTCFullYear()}-${pad2(t.getUTCMonth()+1)}-${pad2(t.getUTCDate())} ${pad2(t.getUTCHours())}:${pad2(t.getUTCMinutes())}`;
+}
+let RESERVAS_FECHADAS=false;
+function checkClosed(partyData){
+  let deadline=null;
+  if(evType==='festa'){
+    if(partyData && partyData.resDate) deadline=partyData.resDate+' '+(partyData.resTime||'00:00');
+  } else if(evDateRaw){
+    deadline=dailyDeadlineStr(evDateRaw, DAILY_SERVICE_TIME, DAILY_CLOSE_HOURS);
+  }
+  if(deadline && nowLisbonStr() > deadline){
+    RESERVAS_FECHADAS=true;
+    const box=document.getElementById('closedBox');
+    box.innerHTML='As reservas para esta data já estão encerradas.' +
+      (REST_PHONE ? '<br>Para mais informações, ligue para <b>'+REST_PHONE+'</b>.' : '');
+    box.style.display='block';
+    const ff=document.getElementById('formFields'); if(ff) ff.style.display='none';
+  }
+}
+
 document.getElementById('restName').textContent = restName;
 document.getElementById('restSub').textContent = restSub;
 document.getElementById('evTitle').textContent = evTitle;
@@ -178,6 +221,9 @@ let MENU_DATA = null;
     if(d.config){
       if(d.config.name){ document.getElementById('restName').textContent=d.config.name; document.getElementById('foot').textContent=d.config.name; }
       if(d.config.sub) document.getElementById('restSub').textContent=d.config.sub;
+      REST_PHONE = d.config.phone || '';
+      if(d.config.dailyServiceTime) DAILY_SERVICE_TIME = d.config.dailyServiceTime;
+      if(d.config.dailyCloseHours!=null) DAILY_CLOSE_HOURS = d.config.dailyCloseHours;
       if(d.config.logo){
         const l=document.getElementById('logo'); l.innerHTML=`<img src="${d.config.logo}" alt="logo">`; l.style.background='transparent';
       } else if(d.config.initial){
@@ -190,6 +236,8 @@ let MENU_DATA = null;
       if(evType==='festa' && d.menu.title){ evTitle=d.menu.title; document.getElementById('evTitle').textContent=d.menu.title; }
       if(d.menu.date){ evDateRaw=d.menu.date; document.getElementById('evDate').textContent=formatDatePt(d.menu.date); }
     }
+    // verifica se as reservas já estão encerradas (diário usa config; festa usa o próprio prazo)
+    checkClosed(evType==='festa' ? d.menu : null);
   }catch(e){ console.error('Sem ligação ao menu:', e); }
 })();
 
@@ -222,6 +270,7 @@ function showErr(m){ errBox.textContent=m; errBox.classList.add('err'); errBox.s
 
 document.getElementById('send').onclick = async () => {
   errBox.style.display='none';
+  if(RESERVAS_FECHADAS){ showErr('As reservas para esta data já estão encerradas.'); return; }
   const name = document.getElementById('name').value.trim();
   const phone = document.getElementById('phone').value.trim();
   const people = parseInt(document.getElementById('people').value,10) || 0;

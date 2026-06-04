@@ -351,6 +351,11 @@
           <label class="fld"><span>Data</span><input type="date" id="partyDate"></label>
           <label class="fld"><span>Preço por pessoa (opcional)</span><input type="text" id="partyPrice" placeholder="35€"></label>
         </div>
+        <div class="row">
+          <label class="fld"><span>Aceitar reservas até (data)</span><input type="date" id="partyResDate"></label>
+          <label class="fld"><span>Hora limite</span><input type="time" id="partyResTime" value="12:00"></label>
+        </div>
+        <p class="lead" style="margin-top:-4px;font-size:12px">Depois desta data/hora, o formulário deixa de aceitar reservas para este evento. Deixa em branco para aceitar sempre.</p>
         <div id="partyCats"></div>
         <div class="btn-row">
           <button class="btn ghost sm" id="addCatParty">+ Adicionar secção</button>
@@ -473,6 +478,14 @@
       <label class="fld"><span>Cor principal</span>
         <div class="swatches" id="cfgSwatches" style="margin-top:4px"></div>
       </label>
+      <div class="cfg-resblock">
+        <span class="section-kicker">Reservas — Menu do dia</span>
+        <p class="lead" style="font-size:13px;margin:4px 0 10px">As reservas do menu do dia fecham um número de horas antes da hora de serviço. (As festas têm a sua própria data-limite, definida em cada evento.)</p>
+        <div class="row">
+          <label class="fld"><span>Hora de serviço (ex: almoço)</span><input type="time" id="cfgDailyServiceTime" value="12:00"></label>
+          <label class="fld"><span>Fechar reservas quantas horas antes</span><input type="number" id="cfgDailyCloseHours" min="0" max="72" step="1" value="3"></label>
+        </div>
+      </div>
       <button class="btn accent" id="saveCfg">Guardar definições</button>
     </div>
   </section>
@@ -506,7 +519,7 @@ const THEMES = [
   {name:'Carvão',    accent:'#3a3a3a', deep:'#1f1f1f', paper:'#efece6', ink:'#1c1c1c'},
 ];
 
-let CFG = { name:'A Tua Cozinha', sub:'Cozinha de mercado', phone:'', addr:'', socials:[], initial:'C', logo:'', resLink:'', themeIndex:0 };
+let CFG = { name:'A Tua Cozinha', sub:'Cozinha de mercado', phone:'', addr:'', socials:[], initial:'C', logo:'', resLink:'', themeIndex:0, dailyServiceTime:'12:00', dailyCloseHours:3 };
 let DAILY = {};        // { 'YYYY-MM-DD': {subtitle, cats:[{name, items:[{name,price}]}]} }
 let PARTIES = [];      // [{id,title,date,price,cats:[...]}]
 let RES = [];          // [{id,name,phone,date,time,people,type,notes,status}]
@@ -1811,6 +1824,8 @@ function readPartyForm(){
     title,
     date,
     price: document.getElementById('partyPrice').value,
+    resDate: document.getElementById('partyResDate').value,
+    resTime: document.getElementById('partyResTime').value,
     cats: readCats(document.getElementById('partyCats')),
     bgId: currentPartyBgId || '',
     bgVeil: currentPartyVeil
@@ -1823,6 +1838,8 @@ function loadPartyForm(p){
   document.getElementById('partyTitle').value=p?.title||'';
   document.getElementById('partyDate').value=p?.date||'';
   document.getElementById('partyPrice').value=p?.price||'';
+  document.getElementById('partyResDate').value=p?.resDate||'';
+  document.getElementById('partyResTime').value=p?.resTime||'12:00';
   const veilEl=document.getElementById('partyVeil'); if(veilEl) veilEl.value=Math.round(currentPartyVeil*100);
   updateBgButton();
   const cont=document.getElementById('partyCats'); cont.innerHTML='';
@@ -2110,6 +2127,8 @@ async function init(){
   document.getElementById('cfgPhone').value=CFG.phone||'';
   document.getElementById('cfgAddr').value=CFG.addr||'';
   document.getElementById('cfgInitial').value=CFG.initial||'C';
+  document.getElementById('cfgDailyServiceTime').value=CFG.dailyServiceTime||'12:00';
+  document.getElementById('cfgDailyCloseHours').value=(CFG.dailyCloseHours!=null?CFG.dailyCloseHours:3);
   renderSocials();
   loadLogo(); updateLogoPreview();
   document.getElementById('cfgInitial').addEventListener('input',e=>{ CFG.initial=e.target.value||'C'; updateHeaderLogo(); updateLogoPreview(); });
@@ -2141,6 +2160,8 @@ async function init(){
     readSocials();
     CFG.socials=CFG.socials.map(s=>s.trim()).filter(Boolean);
     CFG.initial=document.getElementById('cfgInitial').value||'C';
+    CFG.dailyServiceTime=document.getElementById('cfgDailyServiceTime').value||'12:00';
+    CFG.dailyCloseHours=parseInt(document.getElementById('cfgDailyCloseHours').value,10); if(isNaN(CFG.dailyCloseHours)) CFG.dailyCloseHours=3;
     await save('config',CFG); applyTheme(); renderSocials(); updateLogoPreview(); refreshDailyPoster(); refreshPartyPoster(); refreshThumbs();
     toast('Definições guardadas ✓');
   };
