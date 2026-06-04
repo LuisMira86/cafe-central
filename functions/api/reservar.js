@@ -16,6 +16,55 @@ const CORS = {
 };
 const json = (status, obj) => new Response(JSON.stringify(obj), { status, headers: CORS });
 
+// ----- prazos de reserva (hora de Lisboa) -----
+function pad2(n){ return String(n).padStart(2,'0'); }
+function nowLisbonStr(){
+  try{
+    const p = new Intl.DateTimeFormat('en-CA',{ timeZone:'Europe/Lisbon', year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false }).formatToParts(new Date());
+    const g = t => p.find(x=>x.type===t).value;
+    return `${g('year')}-${g('month')}-${g('day')} ${g('hour')}:${g('minute')}`;
+  }catch(e){
+    const d=new Date(); return `${d.getUTCFullYear()}-${pad2(d.getUTCMonth()+1)}-${pad2(d.getUTCDate())} ${pad2(d.getUTCHours())}:${pad2(d.getUTCMinutes())}`;
+  }
+}
+function dailyDeadlineStr(dateStr, serviceTime, closeHours){
+  const [hh,mm] = String(serviceTime||'12:00').split(':').map(n=>parseInt(n,10)||0);
+  const [y,m,d] = dateStr.split('-').map(n=>parseInt(n,10));
+  const ms = Date.UTC(y,(m||1)-1,d||1,hh,mm) - (Number(closeHours)||0)*3600000;
+  const t = new Date(ms);
+  return `${t.getUTCFullYear()}-${pad2(t.getUTCMonth()+1)}-${pad2(t.getUTCDate())} ${pad2(t.getUTCHours())}:${pad2(t.getUTCMinutes())}`;
+}
+async function getByKey(token, key){
+  const formula = encodeURIComponent("{Chave}='" + String(key).replace(/'/g,'') + "'");
+  const url = 'https://api.airtable.com/v0/'+AT_BASE+'/'+AT_TABLE+'?maxRecords=1&returnFieldsByFieldId=true&filterByFormula='+formula;
+  const r = await fetch(url, { headers:{ 'Authorization':'Bearer '+token } });
+  if(!r.ok) throw new Error('getByKey '+r.status);
+  const d = await r.json();
+  const rec = (d.records||[])[0];
+  if(!rec) return null;
+  const raw = rec.fields[F.content];
+  try{ return raw!=null ? JSON.parse(raw) : null; }catch(e){ return raw; }
+}
+// devolve uma mensagem se as reservas estiverem encerradas, ou null se ainda abertas
+async function reservasEncerradas(token, type, date, sourceKey){
+  try{
+    if(type === 'festa'){
+      if(!sourceKey) return null;
+      const party = await getByKey(token, sourceKey);
+      if(!party || !party.resDate) return null;              // evento sem limite -> sempre aberto
+      const deadline = party.resDate + ' ' + (party.resTime || '00:00');
+      return nowLisbonStr() > deadline ? 'As reservas para este evento já estão encerradas.' : null;
+    } else {
+      if(!date) return null;
+      const cfg = await getByKey(token, 'config');
+      const st = (cfg && cfg.dailyServiceTime) || '12:00';
+      const ch = (cfg && cfg.dailyCloseHours != null) ? cfg.dailyCloseHours : 3;
+      const deadline = dailyDeadlineStr(date, st, ch);
+      return nowLisbonStr() > deadline ? 'As reservas para o menu deste dia já estão encerradas.' : null;
+    }
+  }catch(e){ return null; }   // erro a ler -> não bloqueia (o formulário já filtra)
+}
+
 // Notifica por WhatsApp (via CallMeBot, grátis) quando entra uma reserva.
 // Suporta VÁRIOS destinatários. Cada número tem a sua própria apikey no CallMeBot.
 // Configuração nas variáveis do Cloudflare (uma destas formas):
@@ -79,6 +128,10 @@ export async function onRequest(context) {
   if (!name)  return json(400, { error: 'Falta o nome' });
   if (!date)  return json(400, { error: 'Falta a data' });
   if (people < 1) return json(400, { error: 'Indica o numero de pessoas' });
+
+  // prazo de reservas (validado no servidor)
+  const fechado = await reservasEncerradas(TOKEN, type, date, sourceKey);
+  if (fechado) return json(403, { error: fechado });
 
   const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
   const reserva = {
